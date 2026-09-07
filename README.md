@@ -2,6 +2,8 @@
 
 A minimal, local-first productivity app for turning goals into focused, trackable scenarios.
 
+**Live:** https://khademadib.github.io/scenario/
+
 Scenario is built with plain HTML, CSS, and JavaScript. It does not require an account, a backend, or a build step; your data stays in your browser through `localStorage`.
 
 ## Why this project exists
@@ -23,7 +25,7 @@ Most task apps become another place to maintain. Scenario keeps the surface inte
 
 ## Stack
 
-`HTML5` · `CSS3` · `JavaScript`
+`HTML5` · `CSS3` · `JavaScript` · `GitHub Pages`
 
 ## Project structure
 
@@ -51,6 +53,10 @@ No build command is required. You can also serve the folder with any static web 
 Scenario stores data under the `scenario.app.v1` key in the browser's `localStorage`. It does not send scenario data to a server.
 
 Clearing site data for the app will remove locally saved scenarios.
+
+## Deployment
+
+The `main` branch deploys automatically to GitHub Pages through GitHub Actions. A separate quality workflow checks the static app on changes before the project is considered healthy.
 
 ## Status
 
