@@ -3,6 +3,20 @@
 
   const STORAGE_KEY = 'scenario.app.v1';
   const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
+  const LEGACY_STARTERS = [
+    {
+      title: 'Define today’s main objective',
+      notes: 'Choose one outcome that would make today feel meaningfully complete.'
+    },
+    {
+      title: 'Turn one idea into something visible',
+      notes: 'A sketch, a commit, a page, a draft — something concrete.'
+    },
+    {
+      title: 'Review the archive',
+      notes: 'Keep what matters. Remove what does not.'
+    }
+  ];
 
   const elements = {
     list: document.querySelector('#scenario-list'),
@@ -395,11 +409,24 @@
       const parsed = JSON.parse(stored);
       if (!Array.isArray(parsed)) return [];
 
-      return parsed.map(normalizeScenario).filter(Boolean);
+      const scenarios = parsed.map(normalizeScenario).filter(Boolean);
+      const cleaned = scenarios.filter(scenario => !isLegacyStarterScenario(scenario));
+
+      if (cleaned.length !== scenarios.length) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(cleaned));
+      }
+
+      return cleaned;
     } catch (error) {
       console.warn('Could not read Scenario data.', error);
       return [];
     }
+  }
+
+  function isLegacyStarterScenario(scenario) {
+    return LEGACY_STARTERS.some(starter =>
+      starter.title === scenario.title && starter.notes === scenario.notes
+    );
   }
 
   function normalizeScenario(value) {
