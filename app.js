@@ -48,7 +48,11 @@
   initialize();
 
   function initialize() {
-    elements.todayLabel.textContent = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(new Date());
+    elements.todayLabel.textContent = new Intl.DateTimeFormat(undefined, {
+      month: 'short',
+      day: 'numeric'
+    }).format(new Date());
+
     bindEvents();
     render();
   }
@@ -81,13 +85,15 @@
     });
 
     elements.dialog.addEventListener('close', resetForm);
-
     document.addEventListener('keydown', handleKeyboardShortcuts);
   }
 
   function handleKeyboardShortcuts(event) {
     const target = event.target;
-    const isTyping = target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement || target.isContentEditable;
+    const isTyping = target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement ||
+      target.isContentEditable;
 
     if (event.key === '/' && !isTyping && !elements.dialog.open) {
       event.preventDefault();
@@ -95,7 +101,14 @@
       return;
     }
 
-    if (event.key.toLowerCase() === 'n' && !isTyping && !elements.dialog.open && !event.metaKey && !event.ctrlKey && !event.altKey) {
+    if (
+      event.key.toLowerCase() === 'n' &&
+      !isTyping &&
+      !elements.dialog.open &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.altKey
+    ) {
       event.preventDefault();
       openEditor();
     }
@@ -103,11 +116,13 @@
 
   function setFilter(filter) {
     state.filter = filter;
+
     elements.filters.forEach(button => {
       const active = button.dataset.filter === filter;
       button.classList.toggle('is-active', active);
       button.setAttribute('aria-pressed', String(active));
     });
+
     renderList();
   }
 
@@ -119,7 +134,9 @@
   function renderMetrics() {
     const active = state.scenarios.filter(scenario => !scenario.completed).length;
     const completed = state.scenarios.length - active;
-    const progress = state.scenarios.length ? Math.round((completed / state.scenarios.length) * 100) : 0;
+    const progress = state.scenarios.length
+      ? Math.round((completed / state.scenarios.length) * 100)
+      : 0;
 
     elements.activeCount.textContent = String(active);
     elements.completedCount.textContent = String(completed);
@@ -164,7 +181,13 @@
     due.classList.toggle('is-overdue', duePresentation.overdue && !scenario.completed);
     due.hidden = !duePresentation.label;
 
-    toggle.setAttribute('aria-label', scenario.completed ? `Mark “${scenario.title}” active` : `Mark “${scenario.title}” complete`);
+    toggle.setAttribute(
+      'aria-label',
+      scenario.completed
+        ? `Mark “${scenario.title}” active`
+        : `Mark “${scenario.title}” complete`
+    );
+
     toggle.addEventListener('click', () => toggleScenario(scenario.id));
     edit.addEventListener('click', () => openEditor(scenario.id));
 
@@ -175,8 +198,8 @@
     const today = todayISO();
 
     const filtered = state.scenarios.filter(scenario => {
-      const matchesSearch = !state.search || `${scenario.title} ${scenario.notes}`.toLowerCase().includes(state.search);
-      if (!matchesSearch) return false;
+      const text = `${scenario.title} ${scenario.notes}`.toLowerCase();
+      if (state.search && !text.includes(state.search)) return false;
 
       if (state.filter === 'active') return !scenario.completed;
       if (state.filter === 'completed') return scenario.completed;
@@ -186,11 +209,17 @@
 
     return filtered.sort((a, b) => {
       if (state.sort === 'newest') return b.createdAt - a.createdAt;
-      if (state.sort === 'priority') return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority] || b.createdAt - a.createdAt;
-      if (state.sort === 'due') return compareDueDates(a, b) || PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
+      if (state.sort === 'priority') {
+        return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority] || b.createdAt - a.createdAt;
+      }
+      if (state.sort === 'due') {
+        return compareDueDates(a, b) || PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
+      }
 
       if (a.completed !== b.completed) return Number(a.completed) - Number(b.completed);
-      return compareDueDates(a, b) || PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority] || b.createdAt - a.createdAt;
+      return compareDueDates(a, b) ||
+        PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority] ||
+        b.createdAt - a.createdAt;
     });
   }
 
@@ -202,11 +231,11 @@
   }
 
   function getEmptyMessage() {
-    if (state.search) return 'Nothing in the archive matches that search.';
-    if (state.filter === 'completed') return 'Complete a scenario and it will appear here.';
-    if (state.filter === 'today') return 'Nothing is due today. You can create a scenario or change a due date.';
-    if (state.filter === 'active') return 'Everything is complete. Start a new scenario when you are ready.';
-    return 'Create one and give the next part of your day a direction.';
+    if (state.search) return 'No scenarios match your search.';
+    if (state.filter === 'completed') return 'No completed scenarios yet.';
+    if (state.filter === 'today') return 'Nothing is due today.';
+    if (state.filter === 'active') return 'You’re all caught up.';
+    return 'Add a scenario to get started.';
   }
 
   function openEditor(id = null) {
@@ -216,6 +245,7 @@
     if (id) {
       const scenario = state.scenarios.find(item => item.id === id);
       if (!scenario) return;
+
       elements.dialogTitle.textContent = 'Edit scenario';
       elements.title.value = scenario.title;
       elements.notes.value = scenario.notes;
@@ -251,7 +281,7 @@
     const title = elements.title.value.trim();
 
     if (!title) {
-      elements.titleError.textContent = 'Give this scenario a title.';
+      elements.titleError.textContent = 'Add a title first.';
       elements.title.focus();
       return;
     }
@@ -265,11 +295,16 @@
 
     if (state.editingId) {
       const index = state.scenarios.findIndex(scenario => scenario.id === state.editingId);
+
       if (index !== -1) {
-        state.scenarios[index] = { ...state.scenarios[index], ...payload, updatedAt: Date.now() };
+        state.scenarios[index] = {
+          ...state.scenarios[index],
+          ...payload,
+          updatedAt: Date.now()
+        };
         persist();
         announce(`Updated ${title}.`);
-        showToast('Scenario updated');
+        showToast('Saved');
       }
     } else {
       state.scenarios.unshift({
@@ -281,7 +316,7 @@
       });
       persist();
       announce(`Created ${title}.`);
-      showToast('Scenario created');
+      showToast('Added');
     }
 
     closeEditor();
@@ -292,7 +327,7 @@
     const scenario = state.scenarios.find(item => item.id === state.editingId);
     if (!scenario) return;
 
-    const confirmed = window.confirm(`Delete “${scenario.title}”? This cannot be undone.`);
+    const confirmed = window.confirm(`Delete “${scenario.title}”?`);
     if (!confirmed) return;
 
     state.scenarios = state.scenarios.filter(item => item.id !== scenario.id);
@@ -300,7 +335,7 @@
     closeEditor();
     render();
     announce(`Deleted ${scenario.title}.`);
-    showToast('Scenario deleted');
+    showToast('Deleted');
   }
 
   function toggleScenario(id) {
@@ -312,9 +347,12 @@
     persist();
     render();
 
-    const message = scenario.completed ? `Completed ${scenario.title}.` : `Reopened ${scenario.title}.`;
+    const message = scenario.completed
+      ? `Completed ${scenario.title}.`
+      : `Reopened ${scenario.title}.`;
+
     announce(message);
-    showToast(scenario.completed ? 'Scenario complete' : 'Scenario reopened');
+    showToast(scenario.completed ? 'Completed' : 'Reopened');
   }
 
   function updateNotesCount() {
@@ -332,7 +370,11 @@
     if (value === toISODate(tomorrow)) return { label: 'Due tomorrow', overdue: false };
 
     const date = new Date(`${value}T12:00:00`);
-    const label = `Due ${new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' }).format(date)}`;
+    const label = `Due ${new Intl.DateTimeFormat(undefined, {
+      month: 'short',
+      day: 'numeric'
+    }).format(date)}`;
+
     return { label, overdue: value < today };
   }
 
@@ -340,27 +382,29 @@
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state.scenarios));
     } catch (error) {
-      console.warn('Scenario could not save to localStorage.', error);
-      showToast('Could not save changes in this browser');
+      console.warn('Could not save Scenario data.', error);
+      showToast('Could not save');
     }
   }
 
   function loadScenarios() {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) return parsed.map(normalizeScenario).filter(Boolean);
-      }
-    } catch (error) {
-      console.warn('Scenario could not read saved data.', error);
-    }
+      if (!stored) return [];
 
-    return starterScenarios();
+      const parsed = JSON.parse(stored);
+      if (!Array.isArray(parsed)) return [];
+
+      return parsed.map(normalizeScenario).filter(Boolean);
+    } catch (error) {
+      console.warn('Could not read Scenario data.', error);
+      return [];
+    }
   }
 
   function normalizeScenario(value) {
     if (!value || typeof value !== 'object' || typeof value.title !== 'string') return null;
+
     return {
       id: typeof value.id === 'string' ? value.id : createId(),
       title: value.title.slice(0, 90),
@@ -373,60 +417,25 @@
     };
   }
 
-  function starterScenarios() {
-    const now = Date.now();
-    const today = todayISO();
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    return [
-      {
-        id: createId(),
-        title: 'Define today’s main objective',
-        notes: 'Choose one outcome that would make today feel meaningfully complete.',
-        priority: 'high',
-        due: today,
-        completed: false,
-        createdAt: now,
-        updatedAt: now
-      },
-      {
-        id: createId(),
-        title: 'Turn one idea into something visible',
-        notes: 'A sketch, a commit, a page, a draft — something concrete.',
-        priority: 'medium',
-        due: toISODate(tomorrow),
-        completed: false,
-        createdAt: now - 1,
-        updatedAt: now - 1
-      },
-      {
-        id: createId(),
-        title: 'Review the archive',
-        notes: 'Keep what matters. Remove what does not.',
-        priority: 'low',
-        due: '',
-        completed: true,
-        createdAt: now - 2,
-        updatedAt: now - 2
-      }
-    ];
-  }
-
   function showToast(message) {
     clearTimeout(toastTimer);
     elements.toast.textContent = message;
     elements.toast.classList.add('is-visible');
-    toastTimer = setTimeout(() => elements.toast.classList.remove('is-visible'), 2200);
+    toastTimer = setTimeout(() => elements.toast.classList.remove('is-visible'), 1800);
   }
 
   function announce(message) {
     elements.liveRegion.textContent = '';
-    requestAnimationFrame(() => { elements.liveRegion.textContent = message; });
+    requestAnimationFrame(() => {
+      elements.liveRegion.textContent = message;
+    });
   }
 
   function createId() {
-    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+      return crypto.randomUUID();
+    }
+
     return `scenario-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   }
 

@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#0a0e16" />
-  <meta name="description" content="Scenario is a minimal, local-first productivity app for turning goals into focused, trackable scenarios." />
-  <title>Scenario — Focus on what moves the story</title>
+  <meta name="theme-color" content="#080b10" />
+  <meta name="description" content="Scenario is a small task tracker that saves everything in your browser." />
+  <title>Scenario — local task tracker</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -18,8 +18,8 @@
           <span></span><span></span><span></span><span></span>
         </div>
         <div>
-          <p class="eyebrow">LOCAL ARCHIVE</p>
-          <h1>SCENARIO</h1>
+          <p class="eyebrow">LOCAL TASKS</p>
+          <h1>Scenario</h1>
         </div>
       </div>
 
@@ -35,7 +35,7 @@
             <strong id="active-count">0</strong>
           </article>
           <article class="metric-card">
-            <span class="metric-label">Complete</span>
+            <span class="metric-label">Completed</span>
             <strong id="completed-count">0</strong>
           </article>
           <article class="metric-card metric-card-wide">
@@ -50,16 +50,16 @@
         </div>
       </section>
 
-      <section class="sidebar-panel" aria-labelledby="signal-heading">
+      <section class="sidebar-panel" aria-labelledby="storage-heading">
         <div class="panel-heading">
-          <h2 id="signal-heading">Signal</h2>
+          <h2 id="storage-heading">Storage</h2>
           <span class="status-dot"><i aria-hidden="true"></i> Local</span>
         </div>
         <p class="sidebar-copy">Your scenarios stay in this browser. No account needed.</p>
       </section>
 
       <div class="sidebar-footer">
-        <p><kbd>N</kbd> new scenario</p>
+        <p><kbd>N</kbd> new</p>
         <p><kbd>/</kbd> search</p>
       </div>
     </aside>
@@ -67,8 +67,8 @@
     <main class="workspace">
       <header class="topbar">
         <div>
-          <p class="eyebrow">CURRENT LOG</p>
-          <h2>What moves the story forward?</h2>
+          <p class="eyebrow">TODAY</p>
+          <h2>What are you working on?</h2>
         </div>
         <button class="button button-primary" id="new-scenario-button" type="button">
           <span aria-hidden="true">＋</span>
@@ -79,7 +79,7 @@
       <section class="command-surface" aria-label="Scenario controls">
         <label class="search-field" for="scenario-search">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" /></svg>
-          <input id="scenario-search" type="search" autocomplete="off" placeholder="Search scenarios…" />
+          <input id="scenario-search" type="search" autocomplete="off" placeholder="Search" />
           <kbd>/</kbd>
         </label>
 
@@ -87,13 +87,13 @@
           <button class="filter-chip is-active" type="button" data-filter="all" aria-pressed="true">All</button>
           <button class="filter-chip" type="button" data-filter="active" aria-pressed="false">Active</button>
           <button class="filter-chip" type="button" data-filter="today" aria-pressed="false">Today</button>
-          <button class="filter-chip" type="button" data-filter="completed" aria-pressed="false">Complete</button>
+          <button class="filter-chip" type="button" data-filter="completed" aria-pressed="false">Completed</button>
         </div>
 
         <label class="sort-field" for="scenario-sort">
           <span>Sort</span>
           <select id="scenario-sort">
-            <option value="smart">Smart</option>
+            <option value="smart">Default</option>
             <option value="newest">Newest</option>
             <option value="due">Due date</option>
             <option value="priority">Priority</option>
@@ -103,10 +103,7 @@
 
       <section class="list-section" aria-labelledby="list-heading">
         <div class="list-heading-row">
-          <div>
-            <p class="eyebrow">ARCHIVE / ACTIVE</p>
-            <h2 id="list-heading">Scenarios</h2>
-          </div>
+          <h2 id="list-heading">Scenarios</h2>
           <span id="result-count" class="result-count" aria-live="polite">0 scenarios</span>
         </div>
 
@@ -114,9 +111,9 @@
 
         <div id="empty-state" class="empty-state" hidden>
           <div class="empty-sigil" aria-hidden="true">✦</div>
-          <h3>No scenarios found</h3>
-          <p id="empty-state-copy">Create one and give the next part of your day a direction.</p>
-          <button class="button button-secondary" id="empty-new-button" type="button">Create scenario</button>
+          <h3>Nothing here yet</h3>
+          <p id="empty-state-copy">Add a scenario to get started.</p>
+          <button class="button button-secondary" id="empty-new-button" type="button">Add scenario</button>
         </div>
       </section>
     </main>
@@ -125,23 +122,20 @@
   <dialog id="scenario-dialog" class="scenario-dialog" aria-labelledby="dialog-title">
     <form id="scenario-form" method="dialog" novalidate>
       <div class="dialog-header">
-        <div>
-          <p class="eyebrow">SCENARIO EDITOR</p>
-          <h2 id="dialog-title">New scenario</h2>
-        </div>
+        <h2 id="dialog-title">New scenario</h2>
         <button class="icon-button" id="dialog-close" type="button" aria-label="Close editor">×</button>
       </div>
 
       <div class="form-grid">
         <label class="field field-full">
           <span>Title <b aria-hidden="true">*</b></span>
-          <input id="scenario-title" name="title" type="text" maxlength="90" required placeholder="e.g. Finish the landing page" />
+          <input id="scenario-title" name="title" type="text" maxlength="90" required placeholder="Finish the landing page" />
           <small id="title-error" class="field-error" aria-live="polite"></small>
         </label>
 
         <label class="field field-full">
           <span>Notes</span>
-          <textarea id="scenario-notes" name="notes" rows="4" maxlength="320" placeholder="What does done look like?"></textarea>
+          <textarea id="scenario-notes" name="notes" rows="4" maxlength="320" placeholder="Optional details"></textarea>
           <small class="field-hint"><span id="notes-count">0</span>/320</small>
         </label>
 
@@ -164,7 +158,7 @@
         <button class="button button-ghost" id="delete-scenario-button" type="button" hidden>Delete</button>
         <span class="dialog-spacer"></span>
         <button class="button button-secondary" id="dialog-cancel" type="button">Cancel</button>
-        <button class="button button-primary" type="submit">Save scenario</button>
+        <button class="button button-primary" type="submit">Save</button>
       </div>
     </form>
   </dialog>
