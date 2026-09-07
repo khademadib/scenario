@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0a0e16" />
+  <meta name="description" content="Scenario is a minimal, local-first productivity app for turning goals into focused, trackable scenarios." />
+  <title>Scenario — Focus on what moves the story</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#scenario-list">Skip to scenarios</a>
+
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Scenario overview">
+      <div class="brand-block">
+        <div class="brand-mark" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <div>
+          <p class="eyebrow">LOCAL ARCHIVE</p>
+          <h1>SCENARIO</h1>
+        </div>
+      </div>
+
+      <section class="sidebar-panel" aria-labelledby="overview-heading">
+        <div class="panel-heading">
+          <h2 id="overview-heading">Overview</h2>
+          <span id="today-label" class="muted"></span>
+        </div>
+
+        <div class="metric-grid">
+          <article class="metric-card">
+            <span class="metric-label">Active</span>
+            <strong id="active-count">0</strong>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Complete</span>
+            <strong id="completed-count">0</strong>
+          </article>
+          <article class="metric-card metric-card-wide">
+            <div class="metric-row">
+              <span class="metric-label">Progress</span>
+              <strong id="progress-value">0%</strong>
+            </div>
+            <div class="progress-track" aria-hidden="true">
+              <span id="progress-bar"></span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="sidebar-panel" aria-labelledby="signal-heading">
+        <div class="panel-heading">
+          <h2 id="signal-heading">Signal</h2>
+          <span class="status-dot"><i aria-hidden="true"></i> Local</span>
+        </div>
+        <p class="sidebar-copy">Your scenarios stay in this browser. No account, no cloud, no distractions.</p>
+      </section>
+
+      <div class="sidebar-footer">
+        <p><kbd>N</kbd> new scenario</p>
+        <p><kbd>/</kbd> search</p>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">CURRENT LOG</p>
+          <h2>What moves the story forward?</h2>
+        </div>
+        <button class="button button-primary" id="new-scenario-button" type="button">
+          <span aria-hidden="true">＋</span>
+          New scenario
+        </button>
+      </header>
+
+      <section class="command-surface" aria-label="Scenario controls">
+        <label class="search-field" for="scenario-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" /></svg>
+          <input id="scenario-search" type="search" autocomplete="off" placeholder="Search scenarios…" />
+          <kbd>/</kbd>
+        </label>
+
+        <div class="filter-row" role="group" aria-label="Filter scenarios">
+          <button class="filter-chip is-active" type="button" data-filter="all" aria-pressed="true">All</button>
+          <button class="filter-chip" type="button" data-filter="active" aria-pressed="false">Active</button>
+          <button class="filter-chip" type="button" data-filter="today" aria-pressed="false">Today</button>
+          <button class="filter-chip" type="button" data-filter="completed" aria-pressed="false">Complete</button>
+        </div>
+
+        <label class="sort-field" for="scenario-sort">
+          <span>Sort</span>
+          <select id="scenario-sort">
+            <option value="smart">Smart</option>
+            <option value="newest">Newest</option>
+            <option value="due">Due date</option>
+            <option value="priority">Priority</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="list-section" aria-labelledby="list-heading">
+        <div class="list-heading-row">
+          <div>
+            <p class="eyebrow">ARCHIVE / ACTIVE</p>
+            <h2 id="list-heading">Scenarios</h2>
+          </div>
+          <span id="result-count" class="result-count" aria-live="polite">0 scenarios</span>
+        </div>
+
+        <div id="scenario-list" class="scenario-list" tabindex="-1"></div>
+
+        <div id="empty-state" class="empty-state" hidden>
+          <div class="empty-sigil" aria-hidden="true">✦</div>
+          <h3>No scenarios found</h3>
+          <p id="empty-state-copy">Create one and give the next part of your day a direction.</p>
+          <button class="button button-secondary" id="empty-new-button" type="button">Create scenario</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="scenario-dialog" class="scenario-dialog" aria-labelledby="dialog-title">
+    <form id="scenario-form" method="dialog" novalidate>
+      <div class="dialog-header">
+        <div>
+          <p class="eyebrow">SCENARIO EDITOR</p>
+          <h2 id="dialog-title">New scenario</h2>
+        </div>
+        <button class="icon-button" id="dialog-close" type="button" aria-label="Close editor">×</button>
+      </div>
+
+      <div class="form-grid">
+        <label class="field field-full">
+          <span>Title <b aria-hidden="true">*</b></span>
+          <input id="scenario-title" name="title" type="text" maxlength="90" required placeholder="e.g. Finish the landing page" />
+          <small id="title-error" class="field-error" aria-live="polite"></small>
+        </label>
+
+        <label class="field field-full">
+          <span>Notes</span>
+          <textarea id="scenario-notes" name="notes" rows="4" maxlength="320" placeholder="What does done look like?"></textarea>
+          <small class="field-hint"><span id="notes-count">0</span>/320</small>
+        </label>
+
+        <label class="field">
+          <span>Priority</span>
+          <select id="scenario-priority" name="priority">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Due date</span>
+          <input id="scenario-due" name="due" type="date" />
+        </label>
+      </div>
+
+      <div class="dialog-actions">
+        <button class="button button-ghost" id="delete-scenario-button" type="button" hidden>Delete</button>
+        <span class="dialog-spacer"></span>
+        <button class="button button-secondary" id="dialog-cancel" type="button">Cancel</button>
+        <button class="button button-primary" type="submit">Save scenario</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="live-region" class="sr-only" aria-live="polite"></div>
+
+  <template id="scenario-card-template">
+    <article class="scenario-card">
+      <button class="complete-toggle" type="button" aria-label="Mark scenario complete">
+        <span aria-hidden="true"></span>
+      </button>
+      <div class="scenario-body">
+        <div class="scenario-topline">
+          <span class="priority-pill"></span>
+          <span class="due-label"></span>
+        </div>
+        <h3 class="scenario-title"></h3>
+        <p class="scenario-notes"></p>
+      </div>
+      <button class="icon-button edit-button" type="button" aria-label="Edit scenario">•••</button>
+    </article>
+  </template>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
