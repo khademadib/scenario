@@ -1,0 +1,34 @@
+name: quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Check JavaScript syntax
+        run: node --check app.js
+
+      - name: Parse HTML
+        run: |
+          python - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          class Parser(HTMLParser):
+              pass
+
+          parser = Parser()
+          parser.feed(Path('index.html').read_text(encoding='utf-8'))
+          print('index.html parsed successfully')
+          PY
