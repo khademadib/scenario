@@ -7,6 +7,7 @@
   <meta name="description" content="Scenario is a small task tracker that saves everything in your browser." />
   <title>Scenario — local task tracker</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="subtasks.css" />
 </head>
 <body>
   <a class="skip-link" href="#scenario-list">Skip to scenarios</a>
@@ -139,6 +140,15 @@
           <small class="field-hint"><span id="notes-count">0</span>/320</small>
         </label>
 
+        <div class="field field-full">
+          <div class="field-row">
+            <span>Steps</span>
+            <button class="text-button" id="add-subtask-button" type="button">+ Add step</button>
+          </div>
+          <div id="subtask-editor-list" class="subtask-editor-list"></div>
+          <small class="field-hint field-hint-left">Optional. Break a larger scenario into smaller steps.</small>
+        </div>
+
         <label class="field">
           <span>Priority</span>
           <select id="scenario-priority" name="priority">
@@ -178,9 +188,23 @@
         </div>
         <h3 class="scenario-title"></h3>
         <p class="scenario-notes"></p>
+        <div class="scenario-subtasks" hidden>
+          <div class="subtask-progress-row">
+            <span class="subtask-count"></span>
+            <span class="subtask-progress-track" aria-hidden="true"><i></i></span>
+          </div>
+          <div class="subtask-list"></div>
+        </div>
       </div>
       <button class="icon-button edit-button" type="button" aria-label="Edit scenario">•••</button>
     </article>
+  </template>
+
+  <template id="subtask-editor-row-template">
+    <div class="subtask-editor-row">
+      <input type="text" maxlength="100" autocomplete="off" placeholder="Add a step" aria-label="Scenario step" />
+      <button class="icon-button subtask-remove-button" type="button" aria-label="Remove step">×</button>
+    </div>
   </template>
 
   <script src="app.js" defer></script>

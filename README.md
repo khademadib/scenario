@@ -9,19 +9,22 @@ I built Scenario to practice working with plain HTML, CSS, and JavaScript withou
 ## What it does
 
 - Add, edit, complete, reopen, and delete scenarios
+- Break larger scenarios into checkable steps
+- Track step progress directly inside each scenario
 - Set a priority and due date
-- Search and filter the list
-- Sort by default order, newest, due date, or priority
-- Save data in the browser
+- Search titles, notes, and steps
+- Filter the list and sort by default order, newest, due date, or priority
+- Save everything in the browser
 - Keyboard shortcuts: `N` for a new scenario and `/` for search
 - Responsive layout for desktop and mobile
 
 ## Files
 
 ```text
-index.html   page structure and dialog
-styles.css  layout and visual design
-app.js      state, storage, filters, sorting, and interactions
+index.html     page structure and dialog
+styles.css    main layout and visual design
+subtasks.css  checklist/step styles
+app.js        state, storage, filters, sorting, steps, and interactions
 ```
 
 ## Run it locally
@@ -35,7 +38,9 @@ Then open `index.html` in a browser. There is no build step.
 
 ## Notes
 
-Scenario stores its data under `scenario.app.v1` in `localStorage`. Clearing the site's browser data will clear the saved scenarios too.
+Scenario stores its data under `scenario.app.v1` in `localStorage`. Existing v1 scenarios are still supported; scenarios created before steps were added simply start with an empty step list.
+
+Clearing the site's browser data will clear the saved scenarios too.
 
 The `main` branch is deployed to GitHub Pages with GitHub Actions. A small quality workflow also checks the static files on pushes and pull requests.
 

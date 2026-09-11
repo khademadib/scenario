@@ -2,6 +2,7 @@
   'use strict';
 
   const STORAGE_KEY = 'scenario.app.v1';
+  const MAX_SUBTASKS = 12;
   const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
   const LEGACY_STARTERS = [
     {
@@ -45,6 +46,9 @@
     notesCount: document.querySelector('#notes-count'),
     priority: document.querySelector('#scenario-priority'),
     due: document.querySelector('#scenario-due'),
+    addSubtaskButton: document.querySelector('#add-subtask-button'),
+    subtaskEditorList: document.querySelector('#subtask-editor-list'),
+    subtaskEditorTemplate: document.querySelector('#subtask-editor-row-template'),
     toast: document.querySelector('#toast'),
     liveRegion: document.querySelector('#live-region')
   };
@@ -57,6 +61,7 @@
     editingId: null
   };
 
+  let editorSubtasks = [];
   let toastTimer = null;
 
   initialize();
@@ -93,6 +98,7 @@
     elements.dialogCancel.addEventListener('click', closeEditor);
     elements.deleteButton.addEventListener('click', deleteEditingScenario);
     elements.notes.addEventListener('input', updateNotesCount);
+    elements.addSubtaskButton.addEventListener('click', () => addEditorSubtask());
 
     elements.dialog.addEventListener('click', event => {
       if (event.target === elements.dialog) closeEditor();
@@ -181,6 +187,10 @@
     const title = fragment.querySelector('.scenario-title');
     const notes = fragment.querySelector('.scenario-notes');
     const edit = fragment.querySelector('.edit-button');
+    const subtaskBox = fragment.querySelector('.scenario-subtasks');
+    const subtaskCount = fragment.querySelector('.subtask-count');
+    const subtaskProgress = fragment.querySelector('.subtask-progress-track i');
+    const subtaskList = fragment.querySelector('.subtask-list');
 
     card.dataset.id = scenario.id;
     card.classList.toggle('is-complete', scenario.completed);
@@ -195,6 +205,8 @@
     due.classList.toggle('is-overdue', duePresentation.overdue && !scenario.completed);
     due.hidden = !duePresentation.label;
 
+    renderCardSubtasks(scenario, subtaskBox, subtaskCount, subtaskProgress, subtaskList);
+
     toggle.setAttribute(
       'aria-label',
       scenario.completed
@@ -208,11 +220,53 @@
     return fragment;
   }
 
+  function renderCardSubtasks(scenario, box, countLabel, progressBar, list) {
+    const subtasks = scenario.subtasks || [];
+    if (!subtasks.length) {
+      box.hidden = true;
+      return;
+    }
+
+    box.hidden = false;
+    const completed = subtasks.filter(subtask => subtask.completed).length;
+    const percent = Math.round((completed / subtasks.length) * 100);
+
+    countLabel.textContent = `${completed}/${subtasks.length} steps`;
+    progressBar.style.width = `${percent}%`;
+    list.replaceChildren();
+
+    subtasks.forEach(subtask => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'subtask-item';
+      button.classList.toggle('is-complete', subtask.completed);
+      button.setAttribute(
+        'aria-label',
+        subtask.completed
+          ? `Mark “${subtask.text}” incomplete`
+          : `Mark “${subtask.text}” complete`
+      );
+
+      const check = document.createElement('span');
+      check.className = 'subtask-check';
+      check.setAttribute('aria-hidden', 'true');
+
+      const text = document.createElement('span');
+      text.className = 'subtask-text';
+      text.textContent = subtask.text;
+
+      button.append(check, text);
+      button.addEventListener('click', () => toggleSubtask(scenario.id, subtask.id));
+      list.append(button);
+    });
+  }
+
   function getVisibleScenarios() {
     const today = todayISO();
 
     const filtered = state.scenarios.filter(scenario => {
-      const text = `${scenario.title} ${scenario.notes}`.toLowerCase();
+      const subtaskText = scenario.subtasks.map(subtask => subtask.text).join(' ');
+      const text = `${scenario.title} ${scenario.notes} ${subtaskText}`.toLowerCase();
       if (state.search && !text.includes(state.search)) return false;
 
       if (state.filter === 'active') return !scenario.completed;
@@ -265,14 +319,17 @@
       elements.notes.value = scenario.notes;
       elements.priority.value = scenario.priority;
       elements.due.value = scenario.due;
+      editorSubtasks = scenario.subtasks.map(subtask => ({ ...subtask }));
       elements.deleteButton.hidden = false;
     } else {
       elements.dialogTitle.textContent = 'New scenario';
       elements.form.reset();
       elements.priority.value = 'medium';
+      editorSubtasks = [];
       elements.deleteButton.hidden = true;
     }
 
+    renderSubtaskEditor();
     updateNotesCount();
     elements.dialog.showModal();
     requestAnimationFrame(() => elements.title.focus());
@@ -284,10 +341,68 @@
 
   function resetForm() {
     state.editingId = null;
+    editorSubtasks = [];
     elements.form.reset();
     elements.titleError.textContent = '';
     elements.notesCount.textContent = '0';
+    elements.subtaskEditorList.replaceChildren();
+    elements.addSubtaskButton.disabled = false;
     elements.deleteButton.hidden = true;
+  }
+
+  function addEditorSubtask(text = '') {
+    if (editorSubtasks.length >= MAX_SUBTASKS) {
+      showToast(`Up to ${MAX_SUBTASKS} steps`);
+      return;
+    }
+
+    editorSubtasks.push({
+      id: createId(),
+      text,
+      completed: false
+    });
+
+    renderSubtaskEditor();
+
+    requestAnimationFrame(() => {
+      const inputs = elements.subtaskEditorList.querySelectorAll('input');
+      inputs[inputs.length - 1]?.focus();
+    });
+  }
+
+  function removeEditorSubtask(id) {
+    editorSubtasks = editorSubtasks.filter(subtask => subtask.id !== id);
+    renderSubtaskEditor();
+  }
+
+  function renderSubtaskEditor() {
+    elements.subtaskEditorList.replaceChildren();
+
+    editorSubtasks.forEach(subtask => {
+      const fragment = elements.subtaskEditorTemplate.content.cloneNode(true);
+      const row = fragment.querySelector('.subtask-editor-row');
+      const input = fragment.querySelector('input');
+      const remove = fragment.querySelector('.subtask-remove-button');
+
+      row.dataset.id = subtask.id;
+      input.value = subtask.text;
+
+      input.addEventListener('input', event => {
+        subtask.text = event.target.value;
+      });
+
+      input.addEventListener('keydown', event => {
+        if (event.key !== 'Enter') return;
+
+        event.preventDefault();
+        if (input.value.trim()) addEditorSubtask();
+      });
+
+      remove.addEventListener('click', () => removeEditorSubtask(subtask.id));
+      elements.subtaskEditorList.append(fragment);
+    });
+
+    elements.addSubtaskButton.disabled = editorSubtasks.length >= MAX_SUBTASKS;
   }
 
   function handleSubmit(event) {
@@ -300,11 +415,21 @@
       return;
     }
 
+    const subtasks = editorSubtasks
+      .map(subtask => ({
+        id: subtask.id || createId(),
+        text: subtask.text.trim(),
+        completed: Boolean(subtask.completed)
+      }))
+      .filter(subtask => subtask.text)
+      .slice(0, MAX_SUBTASKS);
+
     const payload = {
       title,
       notes: elements.notes.value.trim(),
       priority: elements.priority.value,
-      due: elements.due.value
+      due: elements.due.value,
+      subtasks
     };
 
     if (state.editingId) {
@@ -367,6 +492,23 @@
 
     announce(message);
     showToast(scenario.completed ? 'Completed' : 'Reopened');
+  }
+
+  function toggleSubtask(scenarioId, subtaskId) {
+    const scenario = state.scenarios.find(item => item.id === scenarioId);
+    const subtask = scenario?.subtasks.find(item => item.id === subtaskId);
+    if (!scenario || !subtask) return;
+
+    subtask.completed = !subtask.completed;
+    scenario.updatedAt = Date.now();
+    persist();
+    renderList();
+
+    announce(
+      subtask.completed
+        ? `Completed step ${subtask.text}.`
+        : `Reopened step ${subtask.text}.`
+    );
   }
 
   function updateNotesCount() {
@@ -438,10 +580,25 @@
       notes: typeof value.notes === 'string' ? value.notes.slice(0, 320) : '',
       priority: ['low', 'medium', 'high'].includes(value.priority) ? value.priority : 'medium',
       due: /^\d{4}-\d{2}-\d{2}$/.test(value.due || '') ? value.due : '',
+      subtasks: normalizeSubtasks(value.subtasks),
       completed: Boolean(value.completed),
       createdAt: Number(value.createdAt) || Date.now(),
       updatedAt: Number(value.updatedAt) || Date.now()
     };
+  }
+
+  function normalizeSubtasks(value) {
+    if (!Array.isArray(value)) return [];
+
+    return value
+      .filter(subtask => subtask && typeof subtask === 'object' && typeof subtask.text === 'string')
+      .map(subtask => ({
+        id: typeof subtask.id === 'string' ? subtask.id : createId(),
+        text: subtask.text.trim().slice(0, 100),
+        completed: Boolean(subtask.completed)
+      }))
+      .filter(subtask => subtask.text)
+      .slice(0, MAX_SUBTASKS);
   }
 
   function showToast(message) {
