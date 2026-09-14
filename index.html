@@ -5,7 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="theme-color" content="#080b10" />
   <meta name="description" content="Scenario is a small task tracker that saves everything in your browser." />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Scenario" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>Scenario — local task tracker</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="subtasks.css" />
   <link rel="stylesheet" href="recurrence.css" />
@@ -58,7 +65,7 @@
           <h2 id="storage-heading">Storage</h2>
           <span class="status-dot"><i aria-hidden="true"></i> Local</span>
         </div>
-        <p class="sidebar-copy">Your scenarios stay in this browser. No account needed.</p>
+        <p class="sidebar-copy">Your scenarios stay in this browser. After the first visit, the app can open offline too.</p>
       </section>
 
       <div class="sidebar-footer">
@@ -74,6 +81,7 @@
           <h2>What are you working on?</h2>
         </div>
         <div class="topbar-actions">
+          <button class="button button-secondary" id="install-app-button" type="button" hidden>Install</button>
           <button class="button button-secondary" id="data-button" type="button">Data</button>
           <button class="button button-primary" id="new-scenario-button" type="button">
             <span aria-hidden="true">＋</span>
@@ -270,5 +278,6 @@
 
   <script src="app.js" defer></script>
   <script src="data.js" defer></script>
+  <script src="pwa.js" defer></script>
 </body>
 </html>

@@ -20,6 +20,8 @@ jobs:
         run: |
           node --check app.js
           node --check data.js
+          node --check pwa.js
+          node --check sw.js
 
       - name: Parse HTML
         run: |
@@ -33,4 +35,24 @@ jobs:
           parser = Parser()
           parser.feed(Path('index.html').read_text(encoding='utf-8'))
           print('index.html parsed successfully')
+          PY
+
+      - name: Validate web app manifest
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          manifest = json.loads(Path('manifest.webmanifest').read_text(encoding='utf-8'))
+          required = ['name', 'short_name', 'start_url', 'display', 'icons']
+          missing = [key for key in required if key not in manifest]
+          if missing:
+              raise SystemExit(f'Manifest missing required fields: {missing}')
+
+          for icon in manifest['icons']:
+              path = Path(icon['src'])
+              if not path.is_file():
+                  raise SystemExit(f'Manifest icon does not exist: {path}')
+
+          print('manifest.webmanifest validated successfully')
           PY
