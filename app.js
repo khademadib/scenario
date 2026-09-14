@@ -3,6 +3,7 @@
 
   const STORAGE_KEY = 'scenario.app.v1';
   const MAX_SUBTASKS = 12;
+  const REPEAT_OPTIONS = ['never', 'daily', 'weekdays', 'weekly', 'monthly'];
   const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
   const LEGACY_STARTERS = [
     {
@@ -46,6 +47,8 @@
     notesCount: document.querySelector('#notes-count'),
     priority: document.querySelector('#scenario-priority'),
     due: document.querySelector('#scenario-due'),
+    repeat: document.querySelector('#scenario-repeat'),
+    repeatError: document.querySelector('#repeat-error'),
     addSubtaskButton: document.querySelector('#add-subtask-button'),
     subtaskEditorList: document.querySelector('#subtask-editor-list'),
     subtaskEditorTemplate: document.querySelector('#subtask-editor-row-template'),
@@ -99,6 +102,8 @@
     elements.deleteButton.addEventListener('click', deleteEditingScenario);
     elements.notes.addEventListener('input', updateNotesCount);
     elements.addSubtaskButton.addEventListener('click', () => addEditorSubtask());
+    elements.due.addEventListener('change', clearRepeatError);
+    elements.repeat.addEventListener('change', clearRepeatError);
 
     elements.dialog.addEventListener('click', event => {
       if (event.target === elements.dialog) closeEditor();
@@ -184,6 +189,7 @@
     const toggle = fragment.querySelector('.complete-toggle');
     const priority = fragment.querySelector('.priority-pill');
     const due = fragment.querySelector('.due-label');
+    const repeat = fragment.querySelector('.repeat-label');
     const title = fragment.querySelector('.scenario-title');
     const notes = fragment.querySelector('.scenario-notes');
     const edit = fragment.querySelector('.edit-button');
@@ -204,6 +210,9 @@
     due.textContent = duePresentation.label;
     due.classList.toggle('is-overdue', duePresentation.overdue && !scenario.completed);
     due.hidden = !duePresentation.label;
+
+    repeat.textContent = formatRepeatLabel(scenario.repeat);
+    repeat.hidden = scenario.repeat === 'never';
 
     renderCardSubtasks(scenario, subtaskBox, subtaskCount, subtaskProgress, subtaskList);
 
@@ -309,6 +318,7 @@
   function openEditor(id = null) {
     state.editingId = id;
     elements.titleError.textContent = '';
+    elements.repeatError.textContent = '';
 
     if (id) {
       const scenario = state.scenarios.find(item => item.id === id);
@@ -319,12 +329,14 @@
       elements.notes.value = scenario.notes;
       elements.priority.value = scenario.priority;
       elements.due.value = scenario.due;
+      elements.repeat.value = scenario.repeat;
       editorSubtasks = scenario.subtasks.map(subtask => ({ ...subtask }));
       elements.deleteButton.hidden = false;
     } else {
       elements.dialogTitle.textContent = 'New scenario';
       elements.form.reset();
       elements.priority.value = 'medium';
+      elements.repeat.value = 'never';
       editorSubtasks = [];
       elements.deleteButton.hidden = true;
     }
@@ -343,7 +355,10 @@
     state.editingId = null;
     editorSubtasks = [];
     elements.form.reset();
+    elements.priority.value = 'medium';
+    elements.repeat.value = 'never';
     elements.titleError.textContent = '';
+    elements.repeatError.textContent = '';
     elements.notesCount.textContent = '0';
     elements.subtaskEditorList.replaceChildren();
     elements.addSubtaskButton.disabled = false;
@@ -408,12 +423,23 @@
   function handleSubmit(event) {
     event.preventDefault();
     const title = elements.title.value.trim();
+    const repeat = elements.repeat.value;
+    const due = elements.due.value;
 
     if (!title) {
       elements.titleError.textContent = 'Add a title first.';
       elements.title.focus();
       return;
     }
+
+    if (repeat !== 'never' && !due) {
+      elements.repeatError.textContent = 'Add a due date for a repeating scenario.';
+      elements.due.focus();
+      return;
+    }
+
+    elements.titleError.textContent = '';
+    elements.repeatError.textContent = '';
 
     const subtasks = editorSubtasks
       .map(subtask => ({
@@ -428,7 +454,9 @@
       title,
       notes: elements.notes.value.trim(),
       priority: elements.priority.value,
-      due: elements.due.value,
+      due,
+      repeat,
+      repeatAnchorDay: repeat === 'monthly' ? Number(due.slice(-2)) : null,
       subtasks
     };
 
@@ -436,9 +464,11 @@
       const index = state.scenarios.findIndex(scenario => scenario.id === state.editingId);
 
       if (index !== -1) {
+        const current = state.scenarios[index];
         state.scenarios[index] = {
-          ...state.scenarios[index],
+          ...current,
           ...payload,
+          seriesId: repeat === 'never' ? current.seriesId : (current.seriesId || current.id),
           updatedAt: Date.now()
         };
         persist();
@@ -446,9 +476,12 @@
         showToast('Saved');
       }
     } else {
+      const id = createId();
       state.scenarios.unshift({
-        id: createId(),
+        id,
         ...payload,
+        seriesId: repeat === 'never' ? '' : id,
+        previousOccurrenceId: '',
         completed: false,
         createdAt: Date.now(),
         updatedAt: Date.now()
@@ -483,8 +516,21 @@
 
     scenario.completed = !scenario.completed;
     scenario.updatedAt = Date.now();
+
+    let nextOccurrence = null;
+    if (scenario.completed && scenario.repeat !== 'never') {
+      nextOccurrence = ensureNextOccurrence(scenario);
+    }
+
     persist();
     render();
+
+    if (scenario.completed && nextOccurrence) {
+      const nextLabel = formatShortDate(nextOccurrence.due);
+      announce(`Completed ${scenario.title}. Next occurrence is due ${nextLabel}.`);
+      showToast(`Next: ${nextLabel}`);
+      return;
+    }
 
     const message = scenario.completed
       ? `Completed ${scenario.title}.`
@@ -492,6 +538,38 @@
 
     announce(message);
     showToast(scenario.completed ? 'Completed' : 'Reopened');
+  }
+
+  function ensureNextOccurrence(scenario) {
+    const existing = state.scenarios.find(item => item.previousOccurrenceId === scenario.id);
+    if (existing) return existing;
+
+    const nextDue = getNextDueDate(scenario.due, scenario.repeat, scenario.repeatAnchorDay);
+    if (!nextDue) return null;
+
+    const now = Date.now();
+    const next = {
+      id: createId(),
+      title: scenario.title,
+      notes: scenario.notes,
+      priority: scenario.priority,
+      due: nextDue,
+      repeat: scenario.repeat,
+      repeatAnchorDay: scenario.repeatAnchorDay,
+      seriesId: scenario.seriesId || scenario.id,
+      previousOccurrenceId: scenario.id,
+      subtasks: scenario.subtasks.map(subtask => ({
+        id: createId(),
+        text: subtask.text,
+        completed: false
+      })),
+      completed: false,
+      createdAt: now,
+      updatedAt: now
+    };
+
+    state.scenarios.unshift(next);
+    return next;
   }
 
   function toggleSubtask(scenarioId, subtaskId) {
@@ -511,6 +589,10 @@
     );
   }
 
+  function clearRepeatError() {
+    elements.repeatError.textContent = '';
+  }
+
   function updateNotesCount() {
     elements.notesCount.textContent = String(elements.notes.value.length);
   }
@@ -525,13 +607,67 @@
     tomorrow.setDate(tomorrow.getDate() + 1);
     if (value === toISODate(tomorrow)) return { label: 'Due tomorrow', overdue: false };
 
-    const date = new Date(`${value}T12:00:00`);
+    const date = parseISODate(value);
     const label = `Due ${new Intl.DateTimeFormat(undefined, {
       month: 'short',
       day: 'numeric'
     }).format(date)}`;
 
     return { label, overdue: value < today };
+  }
+
+  function formatRepeatLabel(value) {
+    if (value === 'daily') return 'Daily';
+    if (value === 'weekdays') return 'Weekdays';
+    if (value === 'weekly') return 'Weekly';
+    if (value === 'monthly') return 'Monthly';
+    return '';
+  }
+
+  function formatShortDate(value) {
+    if (!value) return '';
+    return new Intl.DateTimeFormat(undefined, {
+      month: 'short',
+      day: 'numeric'
+    }).format(parseISODate(value));
+  }
+
+  function getNextDueDate(value, repeat, anchorDay) {
+    if (!value || repeat === 'never') return '';
+
+    const date = parseISODate(value);
+
+    if (repeat === 'daily') {
+      date.setDate(date.getDate() + 1);
+      return toISODate(date);
+    }
+
+    if (repeat === 'weekdays') {
+      do {
+        date.setDate(date.getDate() + 1);
+      } while (date.getDay() === 0 || date.getDay() === 6);
+      return toISODate(date);
+    }
+
+    if (repeat === 'weekly') {
+      date.setDate(date.getDate() + 7);
+      return toISODate(date);
+    }
+
+    if (repeat === 'monthly') {
+      const targetDay = clamp(Number(anchorDay) || date.getDate(), 1, 31);
+      const nextMonth = date.getMonth() + 1;
+      const lastDay = new Date(date.getFullYear(), nextMonth + 1, 0, 12).getDate();
+      const nextDate = new Date(
+        date.getFullYear(),
+        nextMonth,
+        Math.min(targetDay, lastDay),
+        12
+      );
+      return toISODate(nextDate);
+    }
+
+    return '';
   }
 
   function persist() {
@@ -574,12 +710,21 @@
   function normalizeScenario(value) {
     if (!value || typeof value !== 'object' || typeof value.title !== 'string') return null;
 
+    const due = /^\d{4}-\d{2}-\d{2}$/.test(value.due || '') ? value.due : '';
+    const repeat = due && REPEAT_OPTIONS.includes(value.repeat) ? value.repeat : 'never';
+
     return {
       id: typeof value.id === 'string' ? value.id : createId(),
       title: value.title.slice(0, 90),
       notes: typeof value.notes === 'string' ? value.notes.slice(0, 320) : '',
       priority: ['low', 'medium', 'high'].includes(value.priority) ? value.priority : 'medium',
-      due: /^\d{4}-\d{2}-\d{2}$/.test(value.due || '') ? value.due : '',
+      due,
+      repeat,
+      repeatAnchorDay: repeat === 'monthly'
+        ? clamp(Number(value.repeatAnchorDay) || Number(due.slice(-2)), 1, 31)
+        : null,
+      seriesId: typeof value.seriesId === 'string' ? value.seriesId : '',
+      previousOccurrenceId: typeof value.previousOccurrenceId === 'string' ? value.previousOccurrenceId : '',
       subtasks: normalizeSubtasks(value.subtasks),
       completed: Boolean(value.completed),
       createdAt: Number(value.createdAt) || Date.now(),
@@ -627,10 +772,18 @@
     return toISODate(new Date());
   }
 
+  function parseISODate(value) {
+    return new Date(`${value}T12:00:00`);
+  }
+
   function toISODate(date) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
   }
 })();

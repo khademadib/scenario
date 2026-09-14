@@ -7,6 +7,7 @@
   const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
   const MAX_SCENARIOS = 1000;
   const MAX_SUBTASKS = 12;
+  const REPEAT_OPTIONS = ['never', 'daily', 'weekdays', 'weekly', 'monthly'];
 
   const elements = {
     button: document.querySelector('#data-button'),
@@ -236,12 +237,21 @@
     const title = value.title.trim().slice(0, 90);
     if (!title) return null;
 
+    const due = /^\d{4}-\d{2}-\d{2}$/.test(value.due || '') ? value.due : '';
+    const repeat = due && REPEAT_OPTIONS.includes(value.repeat) ? value.repeat : 'never';
+
     return {
       id: typeof value.id === 'string' && value.id ? value.id : createId(),
       title,
       notes: typeof value.notes === 'string' ? value.notes.slice(0, 320) : '',
       priority: ['low', 'medium', 'high'].includes(value.priority) ? value.priority : 'medium',
-      due: /^\d{4}-\d{2}-\d{2}$/.test(value.due || '') ? value.due : '',
+      due,
+      repeat,
+      repeatAnchorDay: repeat === 'monthly'
+        ? clamp(Number(value.repeatAnchorDay) || Number(due.slice(-2)), 1, 31)
+        : null,
+      seriesId: typeof value.seriesId === 'string' ? value.seriesId : '',
+      previousOccurrenceId: typeof value.previousOccurrenceId === 'string' ? value.previousOccurrenceId : '',
       subtasks: normalizeSubtasks(value.subtasks),
       completed: Boolean(value.completed),
       createdAt: Number(value.createdAt) || Date.now(),
@@ -298,5 +308,9 @@
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
   }
 })();

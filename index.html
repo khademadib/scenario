@@ -8,6 +8,7 @@
   <title>Scenario — local task tracker</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="subtasks.css" />
+  <link rel="stylesheet" href="recurrence.css" />
   <link rel="stylesheet" href="data.css" />
 </head>
 <body>
@@ -166,6 +167,19 @@
           <span>Due date</span>
           <input id="scenario-due" name="due" type="date" />
         </label>
+
+        <label class="field field-full recurrence-field">
+          <span>Repeat</span>
+          <select id="scenario-repeat" name="repeat">
+            <option value="never" selected>Never</option>
+            <option value="daily">Daily</option>
+            <option value="weekdays">Weekdays</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+          <small class="field-hint field-hint-left">When completed, a new occurrence is created and its steps start unchecked.</small>
+          <small id="repeat-error" class="field-error" aria-live="polite"></small>
+        </label>
       </div>
 
       <div class="dialog-actions">
@@ -191,7 +205,7 @@
         <div class="data-option">
           <div>
             <strong>Export backup</strong>
-            <p>Download your scenarios, steps, priorities, dates, and completion state as a JSON file.</p>
+            <p>Download your scenarios, steps, repeat settings, priorities, dates, and completion state as a JSON file.</p>
           </div>
           <button class="button button-secondary" id="export-data-button" type="button">Export</button>
         </div>
@@ -231,6 +245,7 @@
         <div class="scenario-topline">
           <span class="priority-pill"></span>
           <span class="due-label"></span>
+          <span class="repeat-label" hidden></span>
         </div>
         <h3 class="scenario-title"></h3>
         <p class="scenario-notes"></p>
