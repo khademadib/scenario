@@ -8,6 +8,7 @@
   <title>Scenario — local task tracker</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="subtasks.css" />
+  <link rel="stylesheet" href="data.css" />
 </head>
 <body>
   <a class="skip-link" href="#scenario-list">Skip to scenarios</a>
@@ -71,10 +72,13 @@
           <p class="eyebrow">TODAY</p>
           <h2>What are you working on?</h2>
         </div>
-        <button class="button button-primary" id="new-scenario-button" type="button">
-          <span aria-hidden="true">＋</span>
-          New scenario
-        </button>
+        <div class="topbar-actions">
+          <button class="button button-secondary" id="data-button" type="button">Data</button>
+          <button class="button button-primary" id="new-scenario-button" type="button">
+            <span aria-hidden="true">＋</span>
+            New scenario
+          </button>
+        </div>
       </header>
 
       <section class="command-surface" aria-label="Scenario controls">
@@ -173,6 +177,48 @@
     </form>
   </dialog>
 
+  <dialog id="data-dialog" class="scenario-dialog data-dialog" aria-labelledby="data-dialog-title">
+    <form method="dialog" novalidate>
+      <div class="dialog-header">
+        <div>
+          <h2 id="data-dialog-title">Data</h2>
+          <p class="data-subtitle">Back up or move your scenarios.</p>
+        </div>
+        <button class="icon-button" id="data-dialog-close" type="button" aria-label="Close data settings">×</button>
+      </div>
+
+      <div id="data-home">
+        <div class="data-option">
+          <div>
+            <strong>Export backup</strong>
+            <p>Download your scenarios, steps, priorities, dates, and completion state as a JSON file.</p>
+          </div>
+          <button class="button button-secondary" id="export-data-button" type="button">Export</button>
+        </div>
+
+        <div class="data-option">
+          <div>
+            <strong>Import backup</strong>
+            <p>Restore a Scenario backup or move your data from another browser.</p>
+          </div>
+          <button class="button button-secondary" id="import-data-button" type="button">Import</button>
+          <input id="import-data-input" type="file" accept="application/json,.json" hidden />
+        </div>
+      </div>
+
+      <div id="import-review" hidden>
+        <p id="import-summary" class="import-summary"></p>
+        <p class="data-note"><strong>Merge</strong> keeps your current scenarios and updates matching ones. <strong>Replace</strong> removes the current list and restores only the backup.</p>
+        <div class="dialog-actions">
+          <button class="button button-ghost" id="import-review-cancel" type="button">Cancel</button>
+          <span class="dialog-spacer"></span>
+          <button class="button button-secondary" id="import-replace-button" type="button">Replace</button>
+          <button class="button button-primary" id="import-merge-button" type="button">Merge</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="live-region" class="sr-only" aria-live="polite"></div>
 
@@ -208,5 +254,6 @@
   </template>
 
   <script src="app.js" defer></script>
+  <script src="data.js" defer></script>
 </body>
 </html>
