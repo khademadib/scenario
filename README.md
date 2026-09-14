@@ -1,6 +1,6 @@
 # Scenario
 
-A small task tracker that runs entirely in the browser.
+A small local-first task tracker that runs in the browser and can be installed as a web app.
 
 **Live demo:** https://khademadib.github.io/scenario/
 
@@ -19,6 +19,8 @@ I built Scenario to practice working with plain HTML, CSS, and JavaScript withou
 - Filter the list and sort by default order, newest, due date, or priority
 - Export a JSON backup of all local Scenario data
 - Import a backup by merging it with the current list or replacing the current list
+- Install Scenario as a PWA on supported browsers
+- Open the app offline after its files have been cached
 - Save everything in the browser
 - Keyboard shortcuts: `N` for a new scenario and `/` for search
 - Responsive layout for desktop and mobile
@@ -26,13 +28,17 @@ I built Scenario to practice working with plain HTML, CSS, and JavaScript withou
 ## Files
 
 ```text
-index.html       page structure and dialogs
-styles.css       main layout and visual design
-subtasks.css     checklist/step styles
-recurrence.css   recurring-scenario styles
-data.css         backup/import interface styles
-data.js          backup export, validation, merge/replace import
-app.js           state, storage, filters, sorting, recurrence, steps, and interactions
+index.html         page structure and dialogs
+styles.css         main layout and visual design
+subtasks.css       checklist/step styles
+recurrence.css     recurring-scenario styles
+data.css           backup/import interface styles
+data.js            backup export, validation, merge/replace import
+app.js             state, storage, filters, sorting, recurrence, steps, and interactions
+pwa.js             service-worker registration and optional install prompt
+sw.js              offline app-shell cache
+manifest.webmanifest  install metadata and app icons
+icons/             install and home-screen icons
 ```
 
 ## Run it locally
@@ -42,7 +48,7 @@ git clone https://github.com/khademadib/scenario.git
 cd scenario
 ```
 
-Then open `index.html` in a browser. There is no build step.
+For the basic app, opening `index.html` still works. Service workers require a secure origin, so PWA/offline behavior should be tested through GitHub Pages or a local development server rather than a `file://` URL.
 
 ## Recurring scenarios
 
@@ -60,12 +66,18 @@ The Data dialog can export a versioned JSON backup. Importing a backup lets you 
 
 Clearing the site's browser data will still clear the live local copy, so keeping an exported backup is useful until cloud sync exists.
 
-The `main` branch is deployed to GitHub Pages with GitHub Actions. A small quality workflow also checks the JavaScript and parses the HTML on pushes and pull requests.
+## PWA and offline use
+
+`manifest.webmanifest` makes Scenario installable on supported browsers. `sw.js` caches the app shell after a successful visit, which lets the interface load without a network connection. Scenario data itself remains local in `localStorage`, so offline edits continue to use the same browser data.
+
+The custom **Install** button only appears when the browser exposes its install prompt. Other browsers can still offer installation through their own browser UI.
+
+The `main` branch is deployed to GitHub Pages with GitHub Actions. The quality workflow checks the JavaScript, parses the HTML, and validates the web app manifest on pushes and pull requests.
 
 ## Next
 
 Things I may add later:
 
-- [ ] Installable PWA support
 - [ ] Optional Google sign-in and cloud sync
+- [ ] Better sync/conflict handling for multiple devices
 - [ ] More recurrence options if they become useful
