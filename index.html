@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="subtasks.css" />
   <link rel="stylesheet" href="recurrence.css" />
   <link rel="stylesheet" href="data.css" />
+  <link rel="stylesheet" href="auth.css" />
 </head>
 <body>
   <a class="skip-link" href="#scenario-list">Skip to scenarios</a>
@@ -66,6 +67,15 @@
           <span class="status-dot"><i aria-hidden="true"></i> Local</span>
         </div>
         <p class="sidebar-copy">Your scenarios stay in this browser. After the first visit, the app can open offline too.</p>
+      </section>
+
+      <section class="sidebar-panel" aria-labelledby="account-heading">
+        <div class="panel-heading">
+          <h2 id="account-heading">Account</h2>
+          <span id="account-status" class="account-status" data-state="guest">Guest</span>
+        </div>
+        <p id="account-sidebar-copy" class="sidebar-copy">Stored on this device. Sign in only if you want cloud sync.</p>
+        <button class="button button-secondary account-button" id="account-button" type="button">Sign in</button>
       </section>
 
       <div class="sidebar-footer">
@@ -241,6 +251,51 @@
     </form>
   </dialog>
 
+  <dialog id="account-dialog" class="scenario-dialog account-dialog" aria-labelledby="account-dialog-title">
+    <div class="dialog-header">
+      <div>
+        <h2 id="account-dialog-title">Account</h2>
+        <p class="data-subtitle">Guest mode stays available. Sign in only for cloud sync.</p>
+      </div>
+      <button class="icon-button" id="account-dialog-close" type="button" aria-label="Close account settings">×</button>
+    </div>
+
+    <div class="account-body">
+      <section id="account-setup-view" class="account-card" hidden>
+        <strong>Cloud setup needed</strong>
+        <p>Firebase project setup is still required before Google sign-in can go live.</p>
+      </section>
+
+      <section id="account-guest-view" class="account-card">
+        <strong>Continue as guest</strong>
+        <p>Scenario keeps working locally with no account. Signing in adds private cloud sync across your devices.</p>
+        <div class="account-actions">
+          <button class="button button-primary" id="google-sign-in-button" type="button">Continue with Google</button>
+        </div>
+      </section>
+
+      <section id="account-user-view" class="account-card" hidden>
+        <div class="account-user">
+          <span id="account-user-initial" class="account-avatar" aria-hidden="true">S</span>
+          <div class="account-user-copy">
+            <strong id="account-user-name">Scenario user</strong>
+            <span id="account-user-email"></span>
+          </div>
+        </div>
+        <p class="sync-detail"><strong id="sync-state">Syncing</strong></p>
+        <p id="sync-detail" class="sync-detail">Connecting to your cloud copy…</p>
+
+        <div id="import-guest-wrap" class="account-actions" hidden>
+          <button class="button button-secondary" id="import-guest-button" type="button">Import guest scenarios</button>
+        </div>
+
+        <div class="account-actions">
+          <button class="button button-ghost" id="sign-out-button" type="button">Sign out</button>
+        </div>
+      </section>
+    </div>
+  </dialog>
+
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
   <div id="live-region" class="sr-only" aria-live="polite"></div>
 
@@ -279,5 +334,7 @@
   <script src="app.js" defer></script>
   <script src="data.js" defer></script>
   <script src="pwa.js" defer></script>
+  <script src="firebase-config.js"></script>
+  <script type="module" src="auth.js"></script>
 </body>
 </html>

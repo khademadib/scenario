@@ -2,7 +2,7 @@ name: quality
 
 on:
   push:
-    branches: [main]
+    branches: [main, v2-firebase-sync]
   pull_request:
     branches: [main]
 
@@ -22,10 +22,12 @@ jobs:
           node --check data.js
           node --check pwa.js
           node --check sw.js
+          node --check firebase-config.js
+          node --input-type=module --check < auth.js
 
       - name: Parse HTML
         run: |
-          python - <<'PY'
+          python - <<'PY2'
           from html.parser import HTMLParser
           from pathlib import Path
 
@@ -35,24 +37,32 @@ jobs:
           parser = Parser()
           parser.feed(Path('index.html').read_text(encoding='utf-8'))
           print('index.html parsed successfully')
-          PY
+          PY2
 
-      - name: Validate web app manifest
+      - name: Validate PWA and Firebase files
         run: |
-          python - <<'PY'
+          python - <<'PY2'
           import json
           from pathlib import Path
 
           manifest = json.loads(Path('manifest.webmanifest').read_text(encoding='utf-8'))
-          required = ['name', 'short_name', 'start_url', 'display', 'icons']
-          missing = [key for key in required if key not in manifest]
+          required_manifest = ['name', 'short_name', 'start_url', 'display', 'icons']
+          missing = [key for key in required_manifest if key not in manifest]
           if missing:
-              raise SystemExit(f'Manifest missing required fields: {missing}')
+              raise SystemExit(f'Manifest missing: {missing}')
 
           for icon in manifest['icons']:
-              path = Path(icon['src'])
-              if not path.is_file():
-                  raise SystemExit(f'Manifest icon does not exist: {path}')
+              if not Path(icon['src']).exists():
+                  raise SystemExit(f'Missing icon: {icon["src"]}')
 
-          print('manifest.webmanifest validated successfully')
-          PY
+          config = json.loads(Path('firebase.json').read_text(encoding='utf-8'))
+          rules_path = config.get('firestore', {}).get('rules')
+          if rules_path != 'firestore.rules' or not Path(rules_path).exists():
+              raise SystemExit('Firestore rules configuration is missing')
+
+          auth = Path('auth.js').read_text(encoding='utf-8')
+          if 'firebasejs/12.19.0' not in auth:
+              raise SystemExit('Expected pinned Firebase browser SDK version')
+
+          print('PWA and Firebase files validated')
+          PY2
