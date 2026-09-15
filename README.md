@@ -4,7 +4,7 @@ A small local-first task tracker that runs in the browser, works offline, and ca
 
 **Live demo:** https://khademadib.github.io/scenario/
 
-Scenario is built with plain HTML, CSS, and JavaScript. Guest mode stores scenarios in `localStorage`; the v2 cloud branch adds optional Firebase Authentication and Cloud Firestore sync without making an account mandatory.
+Scenario is built with plain HTML, CSS, and JavaScript. Guest mode stores scenarios in `localStorage`; v2 adds optional Firebase Authentication and Cloud Firestore sync without making an account mandatory.
 
 ## What it does
 
@@ -52,14 +52,12 @@ Scenario still uses `localStorage` while signed in, so the interface remains usa
 
 ## Firebase setup
 
-The v2 code is intentionally safe to commit before a Firebase project is connected. If `firebase-config.js` contains empty values, Scenario stays in guest mode and the Account dialog explains that cloud setup is pending.
-
-To activate cloud sync:
+To activate cloud sync for a deployment:
 
 1. Create a Firebase project and register a Web app.
 2. Copy the Firebase web configuration into `firebase-config.js`.
 3. In Firebase Authentication, enable the Google provider.
-4. Add `khademadib.github.io` to Authentication's authorized domains.
+4. Add the deployment domain to Authentication's authorized domains.
 5. Create a Cloud Firestore database.
 6. Publish the included `firestore.rules` before allowing real users to sync.
 
@@ -69,7 +67,7 @@ The browser-module imports in `auth.js` are pinned to Firebase JS SDK `12.19.0` 
 
 ## Security model
 
-Cloud documents are stored under each Firebase user's UID. `firestore.rules` requires the authenticated UID to match the user path and validates the main Scenario record shape. Client-side checks are only for UX; the Firestore rules are the actual authorization boundary for browser writes.
+Cloud documents are stored under each Firebase user's UID. `firestore.rules` requires the authenticated UID to match the user path, binds each record to its Firestore document ID, validates the main Scenario record shape, and blocks hard deletes.
 
 Deleted scenarios are represented by small tombstone records rather than immediately deleting the Firestore document. This lets another device learn that the scenario was deleted instead of treating its old local copy as new data.
 
@@ -77,6 +75,6 @@ Deleted scenarios are represented by small tombstone records rather than immedia
 
 `manifest.webmanifest` makes Scenario installable on supported browsers. `sw.js` caches the app shell. Scenario data remains local-first, so offline edits continue to work and can sync after reconnecting when a user is signed in.
 
-## Development status
+## v2 validation
 
-`main` remains the stable local-first release. The Firebase work lives on `v2-firebase-sync` until the Firebase project is configured and sign-in/sync are tested end-to-end.
+Before release, v2 was tested end-to-end on GitHub Pages for Google sign-in, Firestore write/read access, guest import, cross-browser restore, edit propagation, and deletion propagation.
