@@ -31,37 +31,47 @@ service cloud.firestore {
         && validRepeat(value.repeat)
         && (value.repeatAnchorDay == null || (value.repeatAnchorDay is int && value.repeatAnchorDay >= 1 && value.repeatAnchorDay <= 31))
         && value.seriesId is string
+        && value.seriesId.size() <= 220
         && value.previousOccurrenceId is string
+        && value.previousOccurrenceId.size() <= 220
         && value.subtasks is list
         && value.subtasks.size() <= 12
         && value.completed is bool
         && value.createdAt is int
-        && value.updatedAt is int;
+        && value.createdAt > 0
+        && value.updatedAt is int
+        && value.updatedAt >= value.createdAt;
     }
 
-    function validRecord(userId) {
+    function validRecord(userId, documentId) {
       return request.resource.data.keys().hasOnly([
           'ownerId', 'scenarioId', 'deleted', 'updatedAt', 'scenario'
         ])
         && request.resource.data.ownerId == userId
         && request.resource.data.scenarioId is string
+        && request.resource.data.scenarioId == documentId
         && request.resource.data.scenarioId.size() > 0
         && request.resource.data.scenarioId.size() <= 220
         && request.resource.data.deleted is bool
         && request.resource.data.updatedAt is int
+        && request.resource.data.updatedAt > 0
         && (
           (request.resource.data.deleted == true && request.resource.data.scenario == null)
           ||
-          (request.resource.data.deleted == false && validScenario(
-            request.resource.data.scenario,
-            request.resource.data.scenarioId
-          ))
+          (
+            request.resource.data.deleted == false
+            && validScenario(
+              request.resource.data.scenario,
+              request.resource.data.scenarioId
+            )
+            && request.resource.data.scenario.updatedAt == request.resource.data.updatedAt
+          )
         );
     }
 
     match /users/{userId}/scenarios/{documentId} {
       allow read: if isOwner(userId);
-      allow create, update: if isOwner(userId) && validRecord(userId);
+      allow create, update: if isOwner(userId) && validRecord(userId, documentId);
       allow delete: if false;
     }
   }
