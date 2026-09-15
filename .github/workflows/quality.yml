@@ -64,5 +64,15 @@ jobs:
           if 'firebasejs/12.19.0' not in auth:
               raise SystemExit('Expected pinned Firebase browser SDK version')
 
+          rules = Path('firestore.rules').read_text(encoding='utf-8')
+          required_rules = [
+              'request.resource.data.scenarioId == documentId',
+              'request.resource.data.scenario.updatedAt == request.resource.data.updatedAt',
+              'allow delete: if false;'
+          ]
+          missing_rules = [needle for needle in required_rules if needle not in rules]
+          if missing_rules:
+              raise SystemExit(f'Firestore rule hardening missing: {missing_rules}')
+
           print('PWA and Firebase files validated')
           PY2
