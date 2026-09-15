@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#080b10" />
+  <meta name="description" content="Scenario is a small task tracker that saves everything in your browser." />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Scenario" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Scenario — local task tracker</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="subtasks.css" />
+  <link rel="stylesheet" href="recurrence.css" />
+  <link rel="stylesheet" href="data.css" />
+  <link rel="stylesheet" href="auth.css" />
+</head>
+<body>
+  <a class="skip-link" href="#scenario-list">Skip to scenarios</a>
+
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Scenario overview">
+      <div class="brand-block">
+        <div class="brand-mark" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <div>
+          <p class="eyebrow">LOCAL TASKS</p>
+          <h1>Scenario</h1>
+        </div>
+      </div>
+
+      <section class="sidebar-panel" aria-labelledby="overview-heading">
+        <div class="panel-heading">
+          <h2 id="overview-heading">Overview</h2>
+          <span id="today-label" class="muted"></span>
+        </div>
+
+        <div class="metric-grid">
+          <article class="metric-card">
+            <span class="metric-label">Active</span>
+            <strong id="active-count">0</strong>
+          </article>
+          <article class="metric-card">
+            <span class="metric-label">Completed</span>
+            <strong id="completed-count">0</strong>
+          </article>
+          <article class="metric-card metric-card-wide">
+            <div class="metric-row">
+              <span class="metric-label">Progress</span>
+              <strong id="progress-value">0%</strong>
+            </div>
+            <div class="progress-track" aria-hidden="true">
+              <span id="progress-bar"></span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="sidebar-panel" aria-labelledby="storage-heading">
+        <div class="panel-heading">
+          <h2 id="storage-heading">Storage</h2>
+          <span class="status-dot"><i aria-hidden="true"></i> Local</span>
+        </div>
+        <p class="sidebar-copy">Your scenarios stay in this browser. After the first visit, the app can open offline too.</p>
+      </section>
+
+      <section class="sidebar-panel" aria-labelledby="account-heading">
+        <div class="panel-heading">
+          <h2 id="account-heading">Account</h2>
+          <span id="account-status" class="account-status" data-state="guest">Guest</span>
+        </div>
+        <p id="account-sidebar-copy" class="sidebar-copy">Stored on this device. Sign in only if you want cloud sync.</p>
+        <button class="button button-secondary account-button" id="account-button" type="button">Sign in</button>
+      </section>
+
+      <div class="sidebar-footer">
+        <p><kbd>N</kbd> new</p>
+        <p><kbd>/</kbd> search</p>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">TODAY</p>
+          <h2>What are you working on?</h2>
+        </div>
+        <div class="topbar-actions">
+          <button class="button button-secondary" id="install-app-button" type="button" hidden>Install</button>
+          <button class="button button-secondary" id="data-button" type="button">Data</button>
+          <button class="button button-primary" id="new-scenario-button" type="button">
+            <span aria-hidden="true">＋</span>
+            New scenario
+          </button>
+        </div>
+      </header>
+
+      <section class="command-surface" aria-label="Scenario controls">
+        <label class="search-field" for="scenario-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" /></svg>
+          <input id="scenario-search" type="search" autocomplete="off" placeholder="Search" />
+          <kbd>/</kbd>
+        </label>
+
+        <div class="filter-row" role="group" aria-label="Filter scenarios">
+          <button class="filter-chip is-active" type="button" data-filter="all" aria-pressed="true">All</button>
+          <button class="filter-chip" type="button" data-filter="active" aria-pressed="false">Active</button>
+          <button class="filter-chip" type="button" data-filter="today" aria-pressed="false">Today</button>
+          <button class="filter-chip" type="button" data-filter="completed" aria-pressed="false">Completed</button>
+        </div>
+
+        <label class="sort-field" for="scenario-sort">
+          <span>Sort</span>
+          <select id="scenario-sort">
+            <option value="smart">Default</option>
+            <option value="newest">Newest</option>
+            <option value="due">Due date</option>
+            <option value="priority">Priority</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="list-section" aria-labelledby="list-heading">
+        <div class="list-heading-row">
+          <h2 id="list-heading">Scenarios</h2>
+          <span id="result-count" class="result-count" aria-live="polite">0 scenarios</span>
+        </div>
+
+        <div id="scenario-list" class="scenario-list" tabindex="-1"></div>
+
+        <div id="empty-state" class="empty-state" hidden>
+          <div class="empty-sigil" aria-hidden="true">✦</div>
+          <h3>Nothing here yet</h3>
+          <p id="empty-state-copy">Add a scenario to get started.</p>
+          <button class="button button-secondary" id="empty-new-button" type="button">Add scenario</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="scenario-dialog" class="scenario-dialog" aria-labelledby="dialog-title">
+    <form id="scenario-form" method="dialog" novalidate>
+      <div class="dialog-header">
+        <h2 id="dialog-title">New scenario</h2>
+        <button class="icon-button" id="dialog-close" type="button" aria-label="Close editor">×</button>
+      </div>
+
+      <div class="form-grid">
+        <label class="field field-full">
+          <span>Title <b aria-hidden="true">*</b></span>
+          <input id="scenario-title" name="title" type="text" maxlength="90" required placeholder="Finish the landing page" />
+          <small id="title-error" class="field-error" aria-live="polite"></small>
+        </label>
+
+        <label class="field field-full">
+          <span>Notes</span>
+          <textarea id="scenario-notes" name="notes" rows="4" maxlength="320" placeholder="Optional details"></textarea>
+          <small class="field-hint"><span id="notes-count">0</span>/320</small>
+        </label>
+
+        <div class="field field-full">
+          <div class="field-row">
+            <span>Steps</span>
+            <button class="text-button" id="add-subtask-button" type="button">+ Add step</button>
+          </div>
+          <div id="subtask-editor-list" class="subtask-editor-list"></div>
+          <small class="field-hint field-hint-left">Optional. Break a larger scenario into smaller steps.</small>
+        </div>
+
+        <label class="field">
+          <span>Priority</span>
+          <select id="scenario-priority" name="priority">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Due date</span>
+          <input id="scenario-due" name="due" type="date" />
+        </label>
+
+        <label class="field field-full recurrence-field">
+          <span>Repeat</span>
+          <select id="scenario-repeat" name="repeat">
+            <option value="never" selected>Never</option>
+            <option value="daily">Daily</option>
+            <option value="weekdays">Weekdays</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+          <small class="field-hint field-hint-left">When completed, a new occurrence is created and its steps start unchecked.</small>
+          <small id="repeat-error" class="field-error" aria-live="polite"></small>
+        </label>
+      </div>
+
+      <div class="dialog-actions">
+        <button class="button button-ghost" id="delete-scenario-button" type="button" hidden>Delete</button>
+        <span class="dialog-spacer"></span>
+        <button class="button button-secondary" id="dialog-cancel" type="button">Cancel</button>
+        <button class="button button-primary" type="submit">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="data-dialog" class="scenario-dialog data-dialog" aria-labelledby="data-dialog-title">
+    <form method="dialog" novalidate>
+      <div class="dialog-header">
+        <div>
+          <h2 id="data-dialog-title">Data</h2>
+          <p class="data-subtitle">Back up or move your scenarios.</p>
+        </div>
+        <button class="icon-button" id="data-dialog-close" type="button" aria-label="Close data settings">×</button>
+      </div>
+
+      <div id="data-home">
+        <div class="data-option">
+          <div>
+            <strong>Export backup</strong>
+            <p>Download your scenarios, steps, repeat settings, priorities, dates, and completion state as a JSON file.</p>
+          </div>
+          <button class="button button-secondary" id="export-data-button" type="button">Export</button>
+        </div>
+
+        <div class="data-option">
+          <div>
+            <strong>Import backup</strong>
+            <p>Restore a Scenario backup or move your data from another browser.</p>
+          </div>
+          <button class="button button-secondary" id="import-data-button" type="button">Import</button>
+          <input id="import-data-input" type="file" accept="application/json,.json" hidden />
+        </div>
+      </div>
+
+      <div id="import-review" hidden>
+        <p id="import-summary" class="import-summary"></p>
+        <p class="data-note"><strong>Merge</strong> keeps your current scenarios and updates matching ones. <strong>Replace</strong> removes the current list and restores only the backup.</p>
+        <div class="dialog-actions">
+          <button class="button button-ghost" id="import-review-cancel" type="button">Cancel</button>
+          <span class="dialog-spacer"></span>
+          <button class="button button-secondary" id="import-replace-button" type="button">Replace</button>
+          <button class="button button-primary" id="import-merge-button" type="button">Merge</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="account-dialog" class="scenario-dialog account-dialog" aria-labelledby="account-dialog-title">
+    <div class="dialog-header">
+      <div>
+        <h2 id="account-dialog-title">Account</h2>
+        <p class="data-subtitle">Guest mode stays available. Sign in only for cloud sync.</p>
+      </div>
+      <button class="icon-button" id="account-dialog-close" type="button" aria-label="Close account settings">×</button>
+    </div>
+
+    <div class="account-body">
+      <section id="account-setup-view" class="account-card" hidden>
+        <strong>Cloud setup needed</strong>
+        <p>Firebase project setup is still required before Google sign-in can go live.</p>
+      </section>
+
+      <section id="account-guest-view" class="account-card">
+        <strong>Continue as guest</strong>
+        <p>Scenario keeps working locally with no account. Signing in adds private cloud sync across your devices.</p>
+        <div class="account-actions">
+          <button class="button button-primary" id="google-sign-in-button" type="button">Continue with Google</button>
+        </div>
+      </section>
+
+      <section id="account-user-view" class="account-card" hidden>
+        <div class="account-user">
+          <span id="account-user-initial" class="account-avatar" aria-hidden="true">S</span>
+          <div class="account-user-copy">
+            <strong id="account-user-name">Scenario user</strong>
+            <span id="account-user-email"></span>
+          </div>
+        </div>
+        <p class="sync-detail"><strong id="sync-state">Syncing</strong></p>
+        <p id="sync-detail" class="sync-detail">Connecting to your cloud copy…</p>
+
+        <div id="import-guest-wrap" class="account-actions" hidden>
+          <button class="button button-secondary" id="import-guest-button" type="button">Import guest scenarios</button>
+        </div>
+
+        <div class="account-actions">
+          <button class="button button-ghost" id="sign-out-button" type="button">Sign out</button>
+        </div>
+      </section>
+    </div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="live-region" class="sr-only" aria-live="polite"></div>
+
+  <template id="scenario-card-template">
+    <article class="scenario-card">
+      <button class="complete-toggle" type="button" aria-label="Mark scenario complete">
+        <span aria-hidden="true"></span>
+      </button>
+      <div class="scenario-body">
+        <div class="scenario-topline">
+          <span class="priority-pill"></span>
+          <span class="due-label"></span>
+          <span class="repeat-label" hidden></span>
+        </div>
+        <h3 class="scenario-title"></h3>
+        <p class="scenario-notes"></p>
+        <div class="scenario-subtasks" hidden>
+          <div class="subtask-progress-row">
+            <span class="subtask-count"></span>
+            <span class="subtask-progress-track" aria-hidden="true"><i></i></span>
+          </div>
+          <div class="subtask-list"></div>
+        </div>
+      </div>
+      <button class="icon-button edit-button" type="button" aria-label="Edit scenario">•••</button>
+    </article>
+  </template>
+
+  <template id="subtask-editor-row-template">
+    <div class="subtask-editor-row">
+      <input type="text" maxlength="100" autocomplete="off" placeholder="Add a step" aria-label="Scenario step" />
+      <button class="icon-button subtask-remove-button" type="button" aria-label="Remove step">×</button>
+    </div>
+  </template>
+
+  <script src="app.js" defer></script>
+  <script src="data.js" defer></script>
+  <script src="pwa.js" defer></script>
+  <script src="firebase-config.js"></script>
+  <script type="module" src="auth.js"></script>
+</body>
+</html>
