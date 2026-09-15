@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
+  <title>Scenario Firebase smoke test</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #080b10; color: #f5f7fa; }
+    main { width: min(560px, calc(100% - 32px)); border: 1px solid #29313d; border-radius: 14px; padding: 24px; background: #0d1118; }
+    h1 { margin: 0 0 10px; font-size: 1.35rem; }
+    p { color: #aeb8c5; line-height: 1.55; }
+    button { border: 1px solid #364151; background: #161d27; color: #fff; border-radius: 10px; padding: 10px 14px; font: inherit; cursor: pointer; }
+    button:disabled { opacity: .55; cursor: default; }
+    #status { margin-top: 16px; padding: 12px; border-radius: 10px; background: #090d13; border: 1px solid #222a35; white-space: pre-wrap; }
+    .ok { color: #cdeed7; }
+    .bad { color: #ffb9b9; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Scenario v2 Firebase test</h1>
+    <p>This temporary page checks Google sign-in plus Firestore write/read access without touching your Scenario tasks.</p>
+    <button id="run">Sign in and run test</button>
+    <button id="signout" hidden>Sign out</button>
+    <div id="status">Ready.</div>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js';
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
+    import { getFirestore, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+
+    const firebaseConfig = {
+      apiKey: 'AIzaSyAgp6auX0tLalDv26U-04AFcD_D87vjCgA',
+      authDomain: 'scenario-kdj.firebaseapp.com',
+      projectId: 'scenario-kdj',
+      storageBucket: 'scenario-kdj.firebasestorage.app',
+      messagingSenderId: '679765109375',
+      appId: '1:679765109375:web:6d9d57f602931f42036d4a'
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const runButton = document.querySelector('#run');
+    const signoutButton = document.querySelector('#signout');
+    const status = document.querySelector('#status');
+    const TEST_ID = '__scenario_v2_connection_test__';
+
+    function setStatus(text, type = '') {
+      status.textContent = text;
+      status.className = type;
+    }
+
+    runButton.addEventListener('click', async () => {
+      runButton.disabled = true;
+      setStatus('Opening Google sign-in…');
+
+      try {
+        const provider = new GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        signoutButton.hidden = false;
+
+        setStatus('Google sign-in: OK\nTesting Firestore rules…');
+
+        const now = Date.now();
+        const ref = doc(db, 'users', user.uid, 'scenarios', TEST_ID);
+        const scenario = {
+          id: TEST_ID,
+          title: 'Scenario connection test',
+          notes: 'Temporary smoke test record.',
+          priority: 'low',
+          due: '',
+          repeat: 'never',
+          repeatAnchorDay: null,
+          seriesId: '',
+          previousOccurrenceId: '',
+          subtasks: [],
+          completed: false,
+          createdAt: now,
+          updatedAt: now
+        };
+
+        await setDoc(ref, {
+          ownerId: user.uid,
+          scenarioId: TEST_ID,
+          deleted: false,
+          updatedAt: now,
+          scenario
+        });
+
+        const snapshot = await getDoc(ref);
+        if (!snapshot.exists() || snapshot.data()?.ownerId !== user.uid) {
+          throw new Error('Firestore read-back did not match the signed-in user.');
+        }
+
+        await setDoc(ref, {
+          ownerId: user.uid,
+          scenarioId: TEST_ID,
+          deleted: true,
+          updatedAt: Date.now(),
+          scenario: null
+        });
+
+        setStatus('Google sign-in: OK\nFirestore write: OK\nFirestore read: OK\nDeletion tombstone: OK\n\nScenario v2 Firebase connection passed.', 'ok');
+      } catch (error) {
+        console.error(error);
+        const code = error?.code ? ` (${error.code})` : '';
+        setStatus(`Test failed${code}\n${error?.message || error}`, 'bad');
+      } finally {
+        runButton.disabled = false;
+      }
+    });
+
+    signoutButton.addEventListener('click', async () => {
+      await signOut(auth);
+      signoutButton.hidden = true;
+      setStatus('Signed out. Test data remains only as a deletion tombstone.');
+    });
+  </script>
+</body>
+</html>
