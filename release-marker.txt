@@ -1,0 +1,1 @@
+Scenario v2.0 — optional Google sign-in and cloud sync.
