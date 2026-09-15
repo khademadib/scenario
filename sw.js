@@ -1,7 +1,7 @@
 'use strict';
 
 const CACHE_PREFIX = 'scenario-shell-';
-const CACHE_NAME = `${CACHE_PREFIX}v1.4.0`;
+const CACHE_NAME = `${CACHE_PREFIX}v2.0.0`;
 
 const APP_SHELL = [
   './',
@@ -10,8 +10,11 @@ const APP_SHELL = [
   './subtasks.css',
   './recurrence.css',
   './data.css',
+  './auth.css',
   './app.js',
   './data.js',
+  './firebase-config.js',
+  './auth.js',
   './pwa.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
