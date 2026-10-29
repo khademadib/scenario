@@ -522,6 +522,9 @@ function sanitizeScenario(value) {
     previousOccurrenceId: typeof value.previousOccurrenceId === 'string' ? value.previousOccurrenceId.slice(0, 220) : '',
     subtasks: sanitizeSubtasks(value.subtasks),
     completed: Boolean(value.completed),
+    completedAt: Boolean(value.completed) && Number.isFinite(Number(value.completedAt)) && Number(value.completedAt) > 0
+      ? Math.floor(Number(value.completedAt))
+      : 0,
     createdAt: positiveTime(value.createdAt),
     updatedAt: positiveTime(value.updatedAt)
   };
