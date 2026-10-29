@@ -254,6 +254,9 @@
       previousOccurrenceId: typeof value.previousOccurrenceId === 'string' ? value.previousOccurrenceId : '',
       subtasks: normalizeSubtasks(value.subtasks),
       completed: Boolean(value.completed),
+      completedAt: Boolean(value.completed) && Number.isFinite(Number(value.completedAt)) && Number(value.completedAt) > 0
+        ? Math.floor(Number(value.completedAt))
+        : 0,
       createdAt: Number(value.createdAt) || Date.now(),
       updatedAt: Number(value.updatedAt) || Date.now()
     };
