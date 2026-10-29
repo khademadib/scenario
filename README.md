@@ -59,7 +59,7 @@ Scenario still uses `localStorage` while signed in, so the interface remains usa
 
 To activate cloud sync for a deployment:
 
-Whenever the scenario data shape changes, publish the matching Firestore rules before relying on cloud sync. For the daily-clear timestamp field, deploy the updated rules with `firebase deploy --only firestore:rules`.
+Whenever the scenario data shape changes, publish the matching Firestore rules before relying on cloud sync. For the daily-clear timestamp field, deploy the updated rules with `firebase deploy --only firestore:rules --project scenario-kdj`.
 
 1. Create a Firebase project and register a Web app.
 2. Copy the Firebase web configuration into `firebase-config.js`.
