@@ -3,6 +3,8 @@
 
   const STORAGE_KEY = 'scenario.app.v1';
   const MAX_SUBTASKS = 12;
+  const DAILY_MILESTONE_GOAL = 5;
+  const DAILY_MILESTONE_KEY = 'scenario.daily-milestone.v1';
   const REPEAT_OPTIONS = ['never', 'daily', 'weekdays', 'weekly', 'monthly'];
   const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
   const LEGACY_STARTERS = [
@@ -53,7 +55,11 @@
     subtaskEditorList: document.querySelector('#subtask-editor-list'),
     subtaskEditorTemplate: document.querySelector('#subtask-editor-row-template'),
     toast: document.querySelector('#toast'),
-    liveRegion: document.querySelector('#live-region')
+    liveRegion: document.querySelector('#live-region'),
+    milestoneDialog: document.querySelector('#milestone-dialog'),
+    milestoneDismiss: document.querySelector('#milestone-dismiss'),
+    milestoneCount: document.querySelector('#milestone-count'),
+    milestoneCopy: document.querySelector('#milestone-copy')
   };
 
   const state = {
@@ -110,6 +116,12 @@
     });
 
     elements.dialog.addEventListener('close', resetForm);
+    elements.milestoneDismiss.addEventListener('click', () => {
+      if (elements.milestoneDialog.open) elements.milestoneDialog.close();
+    });
+    elements.milestoneDialog.addEventListener('click', event => {
+      if (event.target === elements.milestoneDialog) elements.milestoneDialog.close();
+    });
     document.addEventListener('keydown', handleKeyboardShortcuts);
   }
 
@@ -120,7 +132,9 @@
       target instanceof HTMLSelectElement ||
       target.isContentEditable;
 
-    if (event.key === '/' && !isTyping && !elements.dialog.open) {
+    const modalOpen = elements.dialog.open || elements.milestoneDialog.open;
+
+    if (event.key === '/' && !isTyping && !modalOpen) {
       event.preventDefault();
       elements.search.focus();
       return;
@@ -129,7 +143,7 @@
     if (
       event.key.toLowerCase() === 'n' &&
       !isTyping &&
-      !elements.dialog.open &&
+      !modalOpen &&
       !event.metaKey &&
       !event.ctrlKey &&
       !event.altKey
@@ -223,7 +237,7 @@
         : `Mark “${scenario.title}” complete`
     );
 
-    toggle.addEventListener('click', () => toggleScenario(scenario.id));
+    toggle.addEventListener('click', () => toggleScenario(scenario.id, toggle));
     edit.addEventListener('click', () => openEditor(scenario.id));
 
     return fragment;
@@ -265,7 +279,7 @@
       text.textContent = subtask.text;
 
       button.append(check, text);
-      button.addEventListener('click', () => toggleSubtask(scenario.id, subtask.id));
+      button.addEventListener('click', () => toggleSubtask(scenario.id, subtask.id, button));
       list.append(button);
     });
   }
@@ -278,10 +292,9 @@
       const text = `${scenario.title} ${scenario.notes} ${subtaskText}`.toLowerCase();
       if (state.search && !text.includes(state.search)) return false;
 
-      if (state.filter === 'active') return !scenario.completed;
       if (state.filter === 'completed') return scenario.completed;
       if (state.filter === 'today') return !scenario.completed && scenario.due === today;
-      return true;
+      return !scenario.completed;
     });
 
     return filtered.sort((a, b) => {
@@ -312,7 +325,10 @@
     if (state.filter === 'completed') return 'No completed scenarios yet.';
     if (state.filter === 'today') return 'Nothing is due today.';
     if (state.filter === 'active') return 'You’re all caught up.';
-    return 'Add a scenario to get started.';
+    if (state.scenarios.some(scenario => scenario.completed)) {
+      return 'All active scenarios are clear. Review Completed or create a new objective.';
+    }
+    return 'The System is waiting for your first scenario.';
   }
 
   function openEditor(id = null) {
@@ -510,20 +526,50 @@
     showToast('Deleted');
   }
 
-  function toggleScenario(id) {
+  function toggleScenario(id, toggle) {
     const scenario = state.scenarios.find(item => item.id === id);
     if (!scenario) return;
 
+    const completedTodayBefore = countCompletedToday();
+    const now = Date.now();
     scenario.completed = !scenario.completed;
-    scenario.updatedAt = Date.now();
+    scenario.completedAt = scenario.completed ? now : 0;
+    scenario.updatedAt = now;
 
     let nextOccurrence = null;
     if (scenario.completed && scenario.repeat !== 'never') {
       nextOccurrence = ensureNextOccurrence(scenario);
     }
 
+    const card = toggle?.closest('.scenario-card') || null;
+    if (card && toggle) {
+      card.classList.toggle('is-complete', scenario.completed);
+      card.classList.add('is-toggling');
+      toggle.disabled = true;
+      toggle.setAttribute(
+        'aria-label',
+        scenario.completed
+          ? `Mark “${scenario.title}” active`
+          : `Mark “${scenario.title}” complete`
+      );
+    }
+
     persist();
-    render();
+    renderMetrics();
+
+    window.setTimeout(() => {
+      card?.classList.remove('is-toggling');
+      renderList();
+
+      const completedTodayAfter = countCompletedToday();
+      if (
+        scenario.completed &&
+        completedTodayBefore < DAILY_MILESTONE_GOAL &&
+        completedTodayAfter >= DAILY_MILESTONE_GOAL
+      ) {
+        showDailyMilestone(completedTodayAfter);
+      }
+    }, 220);
 
     if (scenario.completed && nextOccurrence) {
       const nextLabel = formatShortDate(nextOccurrence.due);
@@ -538,6 +584,32 @@
 
     announce(message);
     showToast(scenario.completed ? 'Completed' : 'Reopened');
+  }
+
+  function countCompletedToday() {
+    const today = todayISO();
+    return state.scenarios.filter(scenario =>
+      scenario.completed &&
+      Number.isFinite(Number(scenario.completedAt)) &&
+      Number(scenario.completedAt) > 0 &&
+      toISODate(new Date(Number(scenario.completedAt))) === today
+    ).length;
+  }
+
+  function showDailyMilestone(completedToday) {
+    const today = todayISO();
+    if (localStorage.getItem(DAILY_MILESTONE_KEY) === today) return;
+
+    localStorage.setItem(DAILY_MILESTONE_KEY, today);
+    elements.milestoneCount.textContent = String(completedToday);
+    elements.milestoneCopy.textContent =
+      `The System recognizes your progress. You cleared ${completedToday} scenarios today.`;
+
+    if (typeof elements.milestoneDialog.showModal === 'function' && !elements.milestoneDialog.open) {
+      elements.milestoneDialog.showModal();
+    }
+
+    announce(`Daily objective cleared. ${completedToday} scenarios completed today.`);
   }
 
   function ensureNextOccurrence(scenario) {
@@ -564,6 +636,7 @@
         completed: false
       })),
       completed: false,
+      completedAt: 0,
       createdAt: now,
       updatedAt: now
     };
@@ -572,21 +645,27 @@
     return next;
   }
 
-  function toggleSubtask(scenarioId, subtaskId) {
+  function toggleSubtask(scenarioId, subtaskId, button) {
     const scenario = state.scenarios.find(item => item.id === scenarioId);
     const subtask = scenario?.subtasks.find(item => item.id === subtaskId);
     if (!scenario || !subtask) return;
 
     subtask.completed = !subtask.completed;
     scenario.updatedAt = Date.now();
-    persist();
-    renderList();
 
+    if (button) {
+      button.classList.toggle('is-complete', subtask.completed);
+      button.disabled = true;
+    }
+
+    persist();
     announce(
       subtask.completed
         ? `Completed step ${subtask.text}.`
         : `Reopened step ${subtask.text}.`
     );
+
+    window.setTimeout(renderList, 170);
   }
 
   function clearRepeatError() {
@@ -727,6 +806,9 @@
       previousOccurrenceId: typeof value.previousOccurrenceId === 'string' ? value.previousOccurrenceId : '',
       subtasks: normalizeSubtasks(value.subtasks),
       completed: Boolean(value.completed),
+      completedAt: Boolean(value.completed) && Number.isFinite(Number(value.completedAt)) && Number(value.completedAt) > 0
+        ? Math.floor(Number(value.completedAt))
+        : 0,
       createdAt: Number(value.createdAt) || Date.now(),
       updatedAt: Number(value.updatedAt) || Date.now()
     };
