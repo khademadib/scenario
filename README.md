@@ -1,6 +1,8 @@
 # Scenario
 
-A small local-first task tracker that runs in the browser, works offline, and can optionally sync through a Google account.
+An unofficial **Omniscient Reader’s Viewpoint (ORV)-inspired scenario system** for personal objectives. Scenario uses a dark, blue-cyan System interface, scenario-cleared milestones, and objective-focused language while remaining a practical local-first tracker that works offline and can optionally sync through a Google account.
+
+This is an unofficial fan project and is not affiliated with or endorsed by the original rights holders.
 
 **Live demo:** https://khademadib.github.io/scenario/
 
@@ -9,6 +11,9 @@ Scenario is built with plain HTML, CSS, and JavaScript. Guest mode stores scenar
 ## What it does
 
 - Add, edit, complete, reopen, and delete scenarios
+- Keep completed scenarios out of the All view; review them in Completed
+- Celebrate the fifth scenario cleared in a day with an ORV-style System message
+- Animate task and step checkboxes with reduced-motion support
 - Break larger scenarios into checkable steps
 - Track step progress directly inside each scenario
 - Set a priority and due date
@@ -53,6 +58,8 @@ Scenario still uses `localStorage` while signed in, so the interface remains usa
 ## Firebase setup
 
 To activate cloud sync for a deployment:
+
+Whenever the scenario data shape changes, publish the matching Firestore rules before relying on cloud sync. For the daily-clear timestamp field, deploy the updated rules with `firebase deploy --only firestore:rules --project scenario-kdj`.
 
 1. Create a Firebase project and register a Web app.
 2. Copy the Firebase web configuration into `firebase-config.js`.

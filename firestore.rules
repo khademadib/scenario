@@ -17,7 +17,7 @@ service cloud.firestore {
       return value is map
         && value.keys().hasOnly([
           'id', 'title', 'notes', 'priority', 'due', 'repeat', 'repeatAnchorDay',
-          'seriesId', 'previousOccurrenceId', 'subtasks', 'completed', 'createdAt', 'updatedAt'
+          'seriesId', 'previousOccurrenceId', 'subtasks', 'completed', 'completedAt', 'createdAt', 'updatedAt'
         ])
         && value.id == scenarioId
         && value.title is string
@@ -37,6 +37,7 @@ service cloud.firestore {
         && value.subtasks is list
         && value.subtasks.size() <= 12
         && value.completed is bool
+        && (!value.keys().hasAny(['completedAt']) || (value.completedAt is int && value.completedAt >= 0 && value.completedAt <= value.updatedAt))
         && value.createdAt is int
         && value.createdAt > 0
         && value.updatedAt is int

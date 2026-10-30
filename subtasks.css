@@ -127,18 +127,21 @@
 
 .subtask-check {
   display: block;
+  position: relative;
   width: 13px;
   height: 13px;
   margin-top: 1px;
   border: 1px solid #4d6079;
   border-radius: 4px;
   background: #0a0f16;
+  transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease, transform 150ms ease;
 }
 
 .subtask-item.is-complete .subtask-check {
   border-color: var(--success);
   background: var(--success);
   box-shadow: inset 0 0 0 3px #0a0f16;
+  transform: scale(1.08);
 }
 
 .subtask-item.is-complete .subtask-text {

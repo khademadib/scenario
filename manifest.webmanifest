@@ -1,13 +1,13 @@
 {
-  "name": "Scenario",
+  "name": "Scenario — ORV System",
   "short_name": "Scenario",
-  "description": "A local-first task tracker with steps, recurring scenarios, and backups.",
+  "description": "An unofficial Omniscient Reader’s Viewpoint-inspired scenario system for personal objectives.",
   "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#080b10",
-  "theme_color": "#080b10",
+  "background_color": "#050b14",
+  "theme_color": "#050b14",
   "icons": [
     {
       "src": "icons/icon-192.png",
