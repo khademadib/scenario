@@ -5,6 +5,8 @@
   const MAX_SUBTASKS = 12;
   const DAILY_MILESTONE_GOAL = 5;
   const DAILY_MILESTONE_KEY = 'scenario.daily-milestone.v1';
+  const DAILY_MILESTONE_PENDING_KEY = 'scenario.daily-milestone-pending.v1';
+  const SESSION_UID_KEY = 'scenario.session.uid.v1';
   const REPEAT_OPTIONS = ['never', 'daily', 'weekdays', 'weekly', 'monthly'];
   const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
   const LEGACY_STARTERS = [
@@ -83,6 +85,7 @@
 
     bindEvents();
     render();
+    window.requestAnimationFrame(showPendingDailyMilestone);
   }
 
   function bindEvents() {
@@ -122,6 +125,7 @@
     elements.milestoneDialog.addEventListener('click', event => {
       if (event.target === elements.milestoneDialog) elements.milestoneDialog.close();
     });
+    elements.milestoneDialog.addEventListener('close', () => elements.list.focus());
     document.addEventListener('keydown', handleKeyboardShortcuts);
   }
 
@@ -557,18 +561,19 @@
     persist();
     renderMetrics();
 
+    const completedTodayAfter = countCompletedToday();
+    if (
+      scenario.completed &&
+      completedTodayBefore < DAILY_MILESTONE_GOAL &&
+      completedTodayAfter >= DAILY_MILESTONE_GOAL
+    ) {
+      queueDailyMilestone(completedTodayAfter);
+    }
+
     window.setTimeout(() => {
       card?.classList.remove('is-toggling');
       renderList();
-
-      const completedTodayAfter = countCompletedToday();
-      if (
-        scenario.completed &&
-        completedTodayBefore < DAILY_MILESTONE_GOAL &&
-        completedTodayAfter >= DAILY_MILESTONE_GOAL
-      ) {
-        showDailyMilestone(completedTodayAfter);
-      }
+      showPendingDailyMilestone();
     }, 220);
 
     if (scenario.completed && nextOccurrence) {
@@ -596,20 +601,65 @@
     ).length;
   }
 
-  function showDailyMilestone(completedToday) {
-    const today = todayISO();
-    if (localStorage.getItem(DAILY_MILESTONE_KEY) === today) return;
+  function getMilestoneStorageKey(key) {
+    const userId = localStorage.getItem(SESSION_UID_KEY);
+    return `${key}:${userId ? `user:${userId}` : 'guest'}`;
+  }
 
-    localStorage.setItem(DAILY_MILESTONE_KEY, today);
-    elements.milestoneCount.textContent = String(completedToday);
+  function queueDailyMilestone(completedToday) {
+    const today = todayISO();
+    const shownKey = getMilestoneStorageKey(DAILY_MILESTONE_KEY);
+    const pendingKey = getMilestoneStorageKey(DAILY_MILESTONE_PENDING_KEY);
+
+    if (localStorage.getItem(shownKey) === today) return;
+
+    try {
+      const pending = JSON.parse(localStorage.getItem(pendingKey) || 'null');
+      if (pending?.date === today) return;
+    } catch {
+      localStorage.removeItem(pendingKey);
+    }
+
+    localStorage.setItem(pendingKey, JSON.stringify({ date: today, count: completedToday }));
+  }
+
+  function showPendingDailyMilestone() {
+    const today = todayISO();
+    const shownKey = getMilestoneStorageKey(DAILY_MILESTONE_KEY);
+    const pendingKey = getMilestoneStorageKey(DAILY_MILESTONE_PENDING_KEY);
+    let pending = null;
+
+    try {
+      pending = JSON.parse(localStorage.getItem(pendingKey) || 'null');
+    } catch {
+      localStorage.removeItem(pendingKey);
+      return;
+    }
+
+    if (!pending || pending.date !== today || !Number.isInteger(pending.count) || pending.count < DAILY_MILESTONE_GOAL) {
+      if (pending) localStorage.removeItem(pendingKey);
+      return;
+    }
+
+    if (localStorage.getItem(shownKey) === today) {
+      localStorage.removeItem(pendingKey);
+      return;
+    }
+
+    elements.milestoneCount.textContent = String(pending.count);
     elements.milestoneCopy.textContent =
-      `The System recognizes your progress. You cleared ${completedToday} scenarios today.`;
+      `The System recognizes your progress. You cleared ${pending.count} scenarios today.`;
 
     if (typeof elements.milestoneDialog.showModal === 'function' && !elements.milestoneDialog.open) {
       elements.milestoneDialog.showModal();
+    } else if (!elements.milestoneDialog.open) {
+      elements.milestoneDialog.setAttribute('open', '');
     }
 
-    announce(`Daily objective cleared. ${completedToday} scenarios completed today.`);
+    elements.milestoneDismiss.focus();
+    localStorage.setItem(shownKey, today);
+    localStorage.removeItem(pendingKey);
+    announce(`Daily objective cleared. ${pending.count} scenarios completed today.`);
   }
 
   function ensureNextOccurrence(scenario) {
