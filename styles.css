@@ -476,22 +476,49 @@ kbd {
   border: 1px solid #334258;
   border-radius: 8px;
   background: #0a0f16;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
 }
 
 .complete-toggle span {
-  width: 10px;
-  height: 10px;
-  border-radius: 3px;
+  position: relative;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
   border: 1px solid #667a95;
-  transition: background 140ms ease, transform 140ms ease;
+  transition: background 170ms ease, border-color 170ms ease, transform 170ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.complete-toggle span::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 7px;
+  border: solid #081019;
+  border-width: 0 2px 2px 0;
+  opacity: 0;
+  transform: rotate(45deg) scale(0.35);
+  transition: opacity 130ms ease, transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .scenario-card.is-complete .complete-toggle span {
   border-color: var(--success);
   background: var(--success);
-  transform: scale(0.8);
+  transform: scale(1);
 }
 
+.scenario-card.is-complete .complete-toggle span::after {
+  opacity: 1;
+  transform: rotate(45deg) scale(1);
+}
+
+.scenario-card.is-completing .complete-toggle,
+.scenario-card.is-reopening .complete-toggle {
+  transform: scale(0.94);
+}
+
+.complete-toggle:disabled { cursor: default; }
 .complete-toggle:hover { border-color: #546b88; }
 
 .scenario-body { min-width: 0; }
@@ -718,6 +745,158 @@ input:focus-visible,
 textarea:focus-visible {
   outline: 2px solid #8ea6c6;
   outline-offset: 3px;
+}
+
+.clearance-dialog {
+  width: min(430px, calc(100vw - 30px));
+  max-width: 430px;
+  border-color: #536789;
+  background: #0a101b;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.62), 0 0 36px rgba(126, 155, 207, 0.12);
+}
+
+.clearance-dialog::backdrop {
+  background: rgba(2, 5, 11, 0.84);
+  backdrop-filter: blur(5px);
+}
+
+.clearance-shell {
+  position: relative;
+  overflow: hidden;
+  padding: 25px;
+  background:
+    radial-gradient(ellipse at 50% -20%, rgba(101, 130, 190, 0.2), transparent 58%),
+    linear-gradient(145deg, #101a2a, #090e17 72%);
+}
+
+.clearance-shell::before,
+.clearance-shell::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  border: 1px solid rgba(146, 171, 212, 0.12);
+  transform: rotate(45deg);
+}
+
+.clearance-shell::before {
+  width: 110px;
+  height: 110px;
+  top: -76px;
+  right: -45px;
+}
+
+.clearance-shell::after {
+  width: 70px;
+  height: 70px;
+  bottom: -50px;
+  left: -34px;
+}
+
+.clearance-topline {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.clearance-sigil {
+  color: #b7c8eb;
+  font-size: 1.05rem;
+  text-shadow: 0 0 14px rgba(158, 187, 238, 0.65);
+}
+
+.clearance-eyebrow,
+.clearance-kicker,
+.clearance-progress span,
+.clearance-reward {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.12em;
+}
+
+.clearance-eyebrow {
+  color: #a9bbdc;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.clearance-close {
+  margin-left: auto;
+  color: #94a4bf;
+}
+
+.clearance-divider {
+  height: 1px;
+  margin: 17px 0 23px;
+  background: linear-gradient(90deg, rgba(153, 183, 235, 0.65), rgba(153, 183, 235, 0.08));
+}
+
+.clearance-kicker {
+  margin: 0 0 8px;
+  color: #91a9d2;
+  font-size: 0.62rem;
+  font-weight: 700;
+}
+
+.clearance-dialog h2 {
+  margin: 0;
+  color: #e7eefb;
+  font-size: clamp(1.55rem, 7vw, 2rem);
+  letter-spacing: 0.045em;
+  text-shadow: 0 0 22px rgba(145, 176, 231, 0.22);
+}
+
+.clearance-copy {
+  margin: 12px 0 20px;
+  color: #aab8ce;
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.clearance-progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 14px;
+  border: 1px solid rgba(139, 163, 204, 0.24);
+  border-radius: 8px;
+  background: rgba(122, 150, 198, 0.07);
+}
+
+.clearance-progress strong {
+  color: #dbe7ff;
+  font: 700 1.5rem/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.04em;
+}
+
+.clearance-progress span {
+  color: #899cb9;
+  font-size: 0.56rem;
+  text-align: right;
+}
+
+.clearance-reward {
+  margin: 16px 0 19px;
+  color: #9cadd0;
+  font-size: 0.59rem;
+  line-height: 1.6;
+}
+
+.clearance-continue {
+  width: 100%;
+  justify-content: center;
+}
+
+.clearance-dialog[open] .clearance-shell {
+  animation: clearance-arrive 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes clearance-arrive {
+  from { opacity: 0; transform: translateY(9px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clearance-dialog[open] .clearance-shell { animation: none; }
 }
 
 @media (max-width: 980px) {
