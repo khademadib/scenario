@@ -2,6 +2,9 @@
   'use strict';
 
   const STORAGE_KEY = 'scenario.app.v1';
+  const COMPLETION_LOG_PREFIX = 'scenario.completion-log.v1';
+  const CLEARANCE_SHOWN_PREFIX = 'scenario.clearance-shown.v1';
+  const COMPLETION_THRESHOLD = 5;
   const MAX_SUBTASKS = 12;
   const REPEAT_OPTIONS = ['never', 'daily', 'weekdays', 'weekly', 'monthly'];
   const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
@@ -53,7 +56,10 @@
     subtaskEditorList: document.querySelector('#subtask-editor-list'),
     subtaskEditorTemplate: document.querySelector('#subtask-editor-row-template'),
     toast: document.querySelector('#toast'),
-    liveRegion: document.querySelector('#live-region')
+    liveRegion: document.querySelector('#live-region'),
+    clearanceDialog: document.querySelector('#clearance-dialog'),
+    clearanceClose: document.querySelector('#clearance-close'),
+    clearanceContinue: document.querySelector('#clearance-continue')
   };
 
   const state = {
@@ -77,6 +83,7 @@
 
     bindEvents();
     render();
+    maybeShowDailyClearance();
   }
 
   function bindEvents() {
@@ -110,6 +117,11 @@
     });
 
     elements.dialog.addEventListener('close', resetForm);
+    elements.clearanceClose.addEventListener('click', closeClearanceDialog);
+    elements.clearanceContinue.addEventListener('click', closeClearanceDialog);
+    elements.clearanceDialog.addEventListener('click', event => {
+      if (event.target === elements.clearanceDialog) closeClearanceDialog();
+    });
     document.addEventListener('keydown', handleKeyboardShortcuts);
   }
 
@@ -223,7 +235,7 @@
         : `Mark “${scenario.title}” complete`
     );
 
-    toggle.addEventListener('click', () => toggleScenario(scenario.id));
+    toggle.addEventListener('click', () => toggleScenario(scenario.id, toggle));
     edit.addEventListener('click', () => openEditor(scenario.id));
 
     return fragment;
@@ -278,10 +290,9 @@
       const text = `${scenario.title} ${scenario.notes} ${subtaskText}`.toLowerCase();
       if (state.search && !text.includes(state.search)) return false;
 
-      if (state.filter === 'active') return !scenario.completed;
       if (state.filter === 'completed') return scenario.completed;
       if (state.filter === 'today') return !scenario.completed && scenario.due === today;
-      return true;
+      return !scenario.completed;
     });
 
     return filtered.sort((a, b) => {
@@ -510,34 +521,140 @@
     showToast('Deleted');
   }
 
-  function toggleScenario(id) {
+  function toggleScenario(id, toggleButton = null) {
     const scenario = state.scenarios.find(item => item.id === id);
-    if (!scenario) return;
+    if (!scenario || toggleButton?.disabled) return;
 
-    scenario.completed = !scenario.completed;
-    scenario.updatedAt = Date.now();
-
-    let nextOccurrence = null;
-    if (scenario.completed && scenario.repeat !== 'never') {
-      nextOccurrence = ensureNextOccurrence(scenario);
+    const willComplete = !scenario.completed;
+    if (toggleButton) {
+      toggleButton.disabled = true;
+      const card = toggleButton.closest('.scenario-card');
+      card?.classList.toggle('is-completing', willComplete);
+      card?.classList.toggle('is-reopening', !willComplete);
+      card?.classList.toggle('is-complete', willComplete);
+      toggleButton.setAttribute(
+        'aria-label',
+        willComplete
+          ? `Completing “${scenario.title}”`
+          : `Reopening “${scenario.title}”`
+      );
     }
 
-    persist();
-    render();
+    const applyCompletion = () => {
+      scenario.completed = willComplete;
+      scenario.updatedAt = Date.now();
 
-    if (scenario.completed && nextOccurrence) {
-      const nextLabel = formatShortDate(nextOccurrence.due);
-      announce(`Completed ${scenario.title}. Next occurrence is due ${nextLabel}.`);
-      showToast(`Next: ${nextLabel}`);
-      return;
+      const completionCount = willComplete ? recordDailyCompletion(scenario.id) : 0;
+      let nextOccurrence = null;
+      if (scenario.completed && scenario.repeat !== 'never') {
+        nextOccurrence = ensureNextOccurrence(scenario);
+      }
+
+      persist();
+      render();
+
+      if (scenario.completed && completionCount >= COMPLETION_THRESHOLD) {
+        maybeShowDailyClearance(completionCount);
+      }
+
+      if (scenario.completed && nextOccurrence) {
+        const nextLabel = formatShortDate(nextOccurrence.due);
+        announce(`Completed ${scenario.title}. Next occurrence is due ${nextLabel}.`);
+        showToast(`Next: ${nextLabel}`);
+        return;
+      }
+
+      const message = scenario.completed
+        ? `Completed ${scenario.title}.`
+        : `Reopened ${scenario.title}.`;
+
+      announce(message);
+      showToast(scenario.completed ? 'Completed' : 'Reopened');
+    };
+
+    if (toggleButton) {
+      window.setTimeout(applyCompletion, 210);
+    } else {
+      applyCompletion();
+    }
+  }
+
+  function getCompletionScope() {
+    try {
+      const uid = localStorage.getItem('scenario.session.uid.v1');
+      return uid ? `user-${uid}` : 'guest';
+    } catch {
+      return 'guest';
+    }
+  }
+
+  function getCompletionLogKey() {
+    return `${COMPLETION_LOG_PREFIX}:${getCompletionScope()}`;
+  }
+
+  function readCompletionLog() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(getCompletionLogKey()) || '{}');
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function getDailyCompletionCount() {
+    const today = todayISO();
+    const log = readCompletionLog();
+    const ids = Array.isArray(log[today]) ? log[today] : [];
+    return new Set(ids.filter(id => typeof id === 'string')).size;
+  }
+
+  function recordDailyCompletion(scenarioId) {
+    const today = todayISO();
+    const log = readCompletionLog();
+    const existing = Array.isArray(log[today])
+      ? log[today].filter(id => typeof id === 'string')
+      : [];
+    const ids = [...new Set(existing)];
+    if (!ids.includes(scenarioId)) ids.push(scenarioId);
+
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+    const cutoffISO = toISODate(cutoff);
+
+    Object.keys(log).forEach(date => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date < cutoffISO || !Array.isArray(log[date])) {
+        delete log[date];
+      }
+    });
+    log[today] = ids;
+
+    try {
+      localStorage.setItem(getCompletionLogKey(), JSON.stringify(log));
+    } catch (error) {
+      console.warn('Could not save Scenario completion history.', error);
     }
 
-    const message = scenario.completed
-      ? `Completed ${scenario.title}.`
-      : `Reopened ${scenario.title}.`;
+    return ids.length;
+  }
 
-    announce(message);
-    showToast(scenario.completed ? 'Completed' : 'Reopened');
+  function maybeShowDailyClearance(count = getDailyCompletionCount()) {
+    if (count < COMPLETION_THRESHOLD || elements.clearanceDialog.open) return;
+
+    const today = todayISO();
+    const shownKey = `${CLEARANCE_SHOWN_PREFIX}:${getCompletionScope()}`;
+    try {
+      if (localStorage.getItem(shownKey) === today) return;
+      localStorage.setItem(shownKey, today);
+    } catch (error) {
+      console.warn('Could not save daily clearance state.', error);
+    }
+
+    elements.clearanceDialog.showModal();
+    announce('Scenario cleared. You completed five objectives today.');
+  }
+
+  function closeClearanceDialog() {
+    if (elements.clearanceDialog.open) elements.clearanceDialog.close();
   }
 
   function ensureNextOccurrence(scenario) {
