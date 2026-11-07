@@ -209,6 +209,26 @@
     </form>
   </dialog>
 
+  <dialog id="clearance-dialog" class="scenario-dialog clearance-dialog" aria-labelledby="clearance-title" aria-describedby="clearance-copy">
+    <div class="clearance-shell">
+      <div class="clearance-topline">
+        <span class="clearance-sigil" aria-hidden="true">✦</span>
+        <span class="clearance-eyebrow">SYSTEM NOTIFICATION</span>
+        <button class="icon-button clearance-close" id="clearance-close" type="button" aria-label="Close notification">×</button>
+      </div>
+      <div class="clearance-divider"></div>
+      <p class="clearance-kicker">DAILY OBJECTIVE</p>
+      <h2 id="clearance-title">SCENARIO CLEARED</h2>
+      <p id="clearance-copy" class="clearance-copy">You have completed five scenarios today. The daily objective has been cleared.</p>
+      <div class="clearance-progress">
+        <strong>05 / 05</strong>
+        <span>OBJECTIVES COMPLETED</span>
+      </div>
+      <p class="clearance-reward">REWARD ISSUED <span aria-hidden="true">·</span> Take a moment to rest.</p>
+      <button class="button button-primary clearance-continue" id="clearance-continue" type="button">Continue</button>
+    </div>
+  </dialog>
+
   <dialog id="data-dialog" class="scenario-dialog data-dialog" aria-labelledby="data-dialog-title">
     <form method="dialog" novalidate>
       <div class="dialog-header">
